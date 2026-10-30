@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { Template, Plan, DurationOption } from "@prisma/client";
+import { useState } from "react";
+import type { Template, TimePackage } from "@prisma/client";
 import { formatVND, splitLines, limitText } from "@/lib/utils";
 import { createOrderAction } from "@/lib/actions";
 import { CheckIcon, TicketIcon } from "./icons";
@@ -10,22 +10,22 @@ interface CheckResult {
   valid: boolean; onCloudflare: boolean; pointsToUs: boolean; used: boolean; messages: string[];
 }
 
-// Form thue ngay trong trang chi tiet mau — mau da co dinh, khach chi chon
-// goi + thoi han + voucher + ten mien.
+// Form thue ngay trong trang chi tiet mau — khach chon 1 GOI THOI GIAN
+// (da gom so thang + tong gia), nhap voucher va ten mien.
 export default function RentForm({
-  template, plans, durations, initPlan, error,
+  template, packages, initPackage, error,
 }: {
-  template: Template; plans: Plan[]; durations: DurationOption[];
-  initPlan?: string; error?: string;
+  template: Template; packages: TimePackage[];
+  initPackage?: string; error?: string;
 }) {
-  const eligiblePlans = plans.filter((p) => p.active && p.tier >= template.minPlanTier);
-  const lowPlans = plans.filter((p) => p.active && p.tier < template.minPlanTier);
-  const [planId, setPlanId] = useState(
-    eligiblePlans.find((p) => p.slug === initPlan)?.id ?? eligiblePlans[0]?.id ?? ""
+  const eligible = packages.filter((p) => p.active && p.tier >= template.minPlanTier);
+  const low = packages.filter((p) => p.active && p.tier < template.minPlanTier);
+  const [pkgId, setPkgId] = useState(
+    eligible.find((p) => p.slug === initPackage)?.id ??
+    eligible.find((p) => p.highlight)?.id ??
+    eligible[0]?.id ?? ""
   );
-  const plan = eligiblePlans.find((p) => p.id === planId) ?? eligiblePlans[0];
-  const [months, setMonths] = useState(12);
-  const duration = durations.find((d) => d.months === months && d.active) ?? durations.find((d) => d.active);
+  const pkg = eligible.find((p) => p.id === pkgId) ?? eligible[0];
 
   const [domain, setDomain] = useState("");
   const [check, setCheck] = useState<CheckResult | null>(null);
@@ -36,16 +36,11 @@ export default function RentForm({
   const [voucherMsg, setVoucherMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [applying, setApplying] = useState(false);
 
-  const gross = plan && duration ? plan.priceMonth * duration.months : 0;
-  const subtotal = useMemo(() => {
-    if (!plan || !duration) return 0;
-    return Math.round((plan.priceMonth * duration.months * (100 - duration.discountPercent)) / 100);
-  }, [plan, duration]);
+  const subtotal = pkg?.price ?? 0;
   const total = Math.max(0, subtotal - (voucher?.discount ?? 0));
 
-  // Doi goi/thoi han thi so tien thay doi — huy voucher da ap, khach ap lai
   function resetVoucher() {
-    if (voucher) setVoucherMsg({ ok: false, text: "Giá đơn đã thay đổi — bấm Áp dụng lại để tính voucher theo giá mới" });
+    if (voucher) setVoucherMsg({ ok: false, text: "Giá đơn đã thay đổi — bấm Áp dụng lại để tính voucher theo gói mới" });
     setVoucher(null);
   }
 
@@ -101,45 +96,36 @@ export default function RentForm({
         <section className="card p-5 sm:p-6">
           <div className="flex items-center gap-3">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">1</span>
-            <h2 className="text-lg font-bold text-slate-900">Chọn gói thuê</h2>
+            <h2 className="text-lg font-bold text-slate-900">Chọn gói thời gian</h2>
           </div>
+          <p className="mt-2 text-sm text-slate-500">Giá đã trọn gói cho cả thời gian thuê — trả một lần, không phát sinh theo tháng.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {eligiblePlans.map((p) => (
-              <label key={p.id} className={`relative cursor-pointer rounded-2xl border-2 p-4 transition ${plan?.id === p.id ? "border-brand-600 bg-brand-50/60 shadow-sm" : "border-slate-200 hover:border-slate-300"}`}>
-                <input type="radio" name="planId" value={p.id} className="sr-only" checked={plan?.id === p.id}
-                  onChange={() => { setPlanId(p.id); resetVoucher(); }} />
-                {p.highlight && <span className="absolute -top-2.5 right-3 rounded-full bg-brand-600 px-2 py-0.5 text-[11px] font-bold text-white">Phổ biến nhất</span>}
+            {eligible.map((p) => (
+              <label key={p.id} className={`relative cursor-pointer rounded-2xl border-2 p-4 transition ${pkg?.id === p.id ? "border-brand-600 bg-brand-50/60 shadow-sm" : "border-slate-200 hover:border-slate-300"}`}>
+                <input type="radio" name="timePackageId" value={p.id} className="sr-only" checked={pkg?.id === p.id}
+                  onChange={() => { setPkgId(p.id); resetVoucher(); }} />
+                {p.highlight && <span className="absolute -top-2.5 right-3 rounded-full bg-brand-600 px-2 py-0.5 text-[11px] font-bold text-white">Được chọn nhiều nhất</span>}
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-slate-900">{p.name}</span>
-                  <span className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${plan?.id === p.id ? "border-brand-600 bg-brand-600 text-white" : "border-slate-300 text-transparent"}`}><CheckIcon className="h-3 w-3" /></span>
+                  <span className={`flex h-5 w-5 items-center justify-center rounded-full border-2 ${pkg?.id === p.id ? "border-brand-600 bg-brand-600 text-white" : "border-slate-300 text-transparent"}`}><CheckIcon className="h-3 w-3" /></span>
                 </div>
-                <div className="mt-1 text-xl font-black text-slate-900">{formatVND(p.priceMonth)}<span className="text-xs font-medium text-slate-500">/tháng</span></div>
+                <div className="mt-1.5 flex items-baseline gap-2">
+                  <span className="text-xl font-black text-slate-900">{formatVND(p.price)}</span>
+                  {p.compareAt > p.price && <span className="text-sm text-slate-400 line-through">{formatVND(p.compareAt)}</span>}
+                </div>
+                <div className="text-xs text-slate-500">
+                  Dùng {p.months} tháng · quy đổi ~{formatVND(Math.round(p.price / p.months))}/tháng
+                </div>
                 <ul className="mt-2 space-y-1 text-xs text-slate-500">
-                  <li>{p.storageGb} GB dung lượng · {limitText(p.productsLimit)} sản phẩm</li>
-                  <li>{p.cmsUsers} tài khoản quản trị · {p.ecommerce ? "Có bán hàng online" : "Web giới thiệu"}</li>
+                  <li>{p.storageGb} GB dung lượng · {limitText(p.productsLimit)} sản phẩm · {p.cmsUsers} tài khoản quản trị</li>
+                  <li>{p.ecommerce ? "Có bán hàng online" : "Web giới thiệu / doanh nghiệp"}</li>
                 </ul>
               </label>
             ))}
           </div>
-          {lowPlans.length > 0 && (
-            <p className="mt-3 text-xs text-slate-400">Mẫu này cần gói tối thiểu tier {template.minPlanTier} nên {lowPlans.map((p) => p.name).join(", ")} không dùng được.</p>
+          {low.length > 0 && (
+            <p className="mt-3 text-xs text-slate-400">Mẫu này cần gói từ tier {template.minPlanTier} trở lên nên {low.map((p) => p.name).join(", ")} không dùng được.</p>
           )}
-
-          <div className="mt-5">
-            <div className="text-sm font-semibold text-slate-700">Thời hạn thuê</div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {durations.filter((d) => d.active).map((d) => (
-                <label key={d.id} className={`cursor-pointer rounded-xl border-2 px-4 py-2 text-center transition ${duration?.months === d.months ? "border-brand-600 bg-brand-50 font-semibold text-brand-800" : "border-slate-200 hover:border-slate-300"}`}>
-                  <input type="radio" name="months" value={d.months} className="sr-only" checked={duration?.months === d.months}
-                    onChange={() => { setMonths(d.months); resetVoucher(); }} />
-                  <span className="block text-sm font-bold">{d.months} tháng</span>
-                  {d.discountPercent > 0
-                    ? <span className="block text-xs font-semibold text-emerald-600">Giảm {d.discountPercent}%</span>
-                    : <span className="block text-xs text-slate-400">Giá gốc</span>}
-                </label>
-              ))}
-            </div>
-          </div>
         </section>
 
         <section className="card p-5 sm:p-6">
@@ -179,11 +165,11 @@ export default function RentForm({
           </div>
           <div className="p-5">
             <dl className="space-y-2.5 text-sm">
-              <div className="flex justify-between"><dt className="text-slate-500">Gói thuê</dt><dd className="font-semibold">{plan?.name ?? "—"}</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-500">Thời hạn</dt><dd className="font-semibold">{duration?.months ?? "—"} tháng</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-500">Tạm tính</dt><dd>{formatVND(gross)}</dd></div>
-              {duration && duration.discountPercent > 0 && (
-                <div className="flex justify-between text-emerald-600"><dt>Chiết khấu thời hạn (−{duration.discountPercent}%)</dt><dd>−{formatVND(gross - subtotal)}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-500">Gói thời gian</dt><dd className="font-semibold">{pkg?.name ?? "—"}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-500">Thời gian dùng</dt><dd className="font-semibold">{pkg?.months ?? "—"} tháng</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-500">Giá trọn gói</dt><dd>{formatVND(subtotal)}</dd></div>
+              {pkg && pkg.compareAt > pkg.price && (
+                <div className="flex justify-between text-emerald-600"><dt>Tiết kiệm so với thuê lẻ</dt><dd>−{formatVND(pkg.compareAt - pkg.price)}</dd></div>
               )}
               {voucher && (
                 <div className="flex justify-between text-emerald-600"><dt>Voucher {voucher.code}</dt><dd>−{formatVND(voucher.discount)}</dd></div>
@@ -211,11 +197,11 @@ export default function RentForm({
                 <li key={x} className="flex gap-1.5"><CheckIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />{x}</li>
               ))}
             </ul>
-            {plan && splitLines(plan.features).length > 0 && (
+            {pkg && splitLines(pkg.features).length > 0 && (
               <div className="mt-4 border-t pt-4">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Gói {plan.name} gồm</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{pkg.name} gồm</div>
                 <ul className="mt-2 space-y-1 text-xs text-slate-500">
-                  {splitLines(plan.features).slice(0, 5).map((f) => (
+                  {splitLines(pkg.features).slice(0, 5).map((f) => (
                     <li key={f} className="flex gap-1.5"><CheckIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-500" />{f}</li>
                   ))}
                 </ul>

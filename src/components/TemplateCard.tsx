@@ -1,12 +1,15 @@
 import Link from "next/link";
 import type { Template } from "@prisma/client";
 import { formatVND, splitLines } from "@/lib/utils";
-import { PlayIcon } from "./icons";
+import { PlayIcon, CheckIcon } from "./icons";
 
 export default function TemplateCard({
-  t, minPrice, rentCount,
+  t, fromPkg, rentCount, showPrice = true,
 }: {
-  t: Template; minPrice?: number | null; rentCount?: number;
+  t: Template;
+  fromPkg?: { price: number; months: number } | null;
+  rentCount?: number;
+  showPrice?: boolean; // trang chu: khong hien gia
 }) {
   const feats = splitLines(t.features).slice(0, 3);
   return (
@@ -33,19 +36,21 @@ export default function TemplateCard({
           <ul className="mt-3 space-y-1 text-[13px] text-slate-500">
             {feats.map((f) => (
               <li key={f} className="flex gap-1.5">
-                <span className="mt-0.5 text-emerald-500">✓</span>
+                <CheckIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
                 <span className="line-clamp-1">{f}</span>
               </li>
             ))}
           </ul>
         )}
-        <div className="mt-4 flex items-end justify-between border-t border-dashed pt-3">
-          <div>
-            <div className="text-[11px] uppercase tracking-wide text-slate-400">Thuê chỉ từ</div>
-            <div className="text-lg font-black text-brand-700">
-              {minPrice ? <>{formatVND(minPrice)}<span className="text-xs font-medium text-slate-400">/tháng</span></> : "Liên hệ"}
+        <div className="mt-4 flex items-end justify-between gap-2 border-t border-dashed pt-3">
+          {showPrice ? (
+            <div>
+              <div className="text-[11px] uppercase tracking-wide text-slate-400">Thuê trọn gói từ</div>
+              <div className="text-lg font-black text-brand-700">
+                {fromPkg ? <>{formatVND(fromPkg.price)}<span className="text-xs font-medium text-slate-400"> /{fromPkg.months} tháng</span></> : "Liên hệ"}
+              </div>
             </div>
-          </div>
+          ) : <div />}
           <div className="flex gap-2">
             {t.demoUrl && (
               <a href={t.demoUrl} target="_blank" rel="noreferrer" className="btn-ghost !px-3" title="Xem demo sống">
