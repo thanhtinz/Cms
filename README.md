@@ -43,4 +43,6 @@ Tài khoản admin seed: `admin@thueweb.vn` / `Admin@123` — **đổi mật kh�
 - Tự đối soát SePay webhook (hiện admin xác nhận tay theo mã đơn).
 - Src website thật trong `sites/` + provisioning nhân bản src + CMS của từng website khách.
 - Job nhắc hết hạn/ân hạn/tạm ngưng tự động; gia hạn tự động từ portal.
-- Deploy production (Vercel + Postgres).
+## Demo online
+
+Đã deploy: https://cms-swart-delta.vercel.app (Vercel project `cms`, GitHub-linked repo này, Neon Postgres free). Mỗi lần push lên `main`, Vercel tự build lại — Build Command trong `vercel.json` tự chạy `prisma generate` + `db push` + `db seed` trước `next build`.
