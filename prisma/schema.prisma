@@ -20,6 +20,7 @@ model User {
   sessions     Session[]
   orders       RentalOrder[]
   sites        Site[]
+  tickets      SupportTicket[]
   createdAt    DateTime      @default(now())
 }
 
@@ -146,9 +147,32 @@ model RentalOrder {
   status          String    @default("CHO_THANH_TOAN") // CHO_THANH_TOAN | DA_THANH_TOAN | DA_HUY
   note            String?
   site            Site?
+  renewalSiteId   String? // neu la don GIA HAN: website duoc gia han
+  renewalSite     Site?     @relation("RenewalOrders", fields: [renewalSiteId], references: [id])
   paidAt          DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+// Yeu cau ho tro (ticket) giua khach va doi ho tro
+model SupportTicket {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id])
+  subject   String
+  status    String          @default("OPEN") // OPEN | ANSWERED | CLOSED
+  messages  TicketMessage[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model TicketMessage {
+  id        String        @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender    String // USER | ADMIN
+  body      String
+  createdAt DateTime      @default(now())
 }
 
 model Voucher {
@@ -202,6 +226,7 @@ model Site {
   status     String      @default("CHO_TRO_DNS") // CHO_TRO_DNS | DANG_HOAT_DONG | TAM_NGUNG | HET_HAN
   startedAt  DateTime?
   expiresAt  DateTime?
+  renewalOrders RentalOrder[] @relation("RenewalOrders")
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 }

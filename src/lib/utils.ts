@@ -44,6 +44,12 @@ export const ORDER_STATUS: Record<string, string> = {
   DA_HUY: "Đã huỷ",
 };
 
+export const TICKET_STATUS: Record<string, { label: string; color: string }> = {
+  OPEN: { label: "Chờ phản hồi", color: "bg-amber-100 text-amber-700" },
+  ANSWERED: { label: "Đã phản hồi", color: "bg-emerald-100 text-emerald-700" },
+  CLOSED: { label: "Đã đóng", color: "bg-slate-200 text-slate-600" },
+};
+
 export const SITE_STATUS: Record<string, { label: string; color: string }> = {
   CHO_TRO_DNS: { label: "Chờ trỏ tên miền", color: "bg-amber-100 text-amber-800" },
   DANG_HOAT_DONG: { label: "Đang hoạt động", color: "bg-emerald-100 text-emerald-800" },
