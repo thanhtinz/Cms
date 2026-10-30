@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { headers } from "next/headers";
 import "./globals.css";
 
 // Toan bo nen tang doc du lieu dong (cai dat, nguoi dung) — khong prerender tinh.
 export const dynamic = "force-dynamic";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import Toasts from "@/components/Toast";
 import { getSettings } from "@/lib/db";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -16,6 +19,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // /admin va /portal co shell rieng (header/footer/menu cua chinh no)
+  const pathname = headers().get("x-pathname") ?? "";
+  const isAppShell = pathname.startsWith("/admin") || pathname.startsWith("/portal");
   return (
     <html lang="vi">
       <head>
@@ -31,9 +37,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <Header />
-        <main className="min-h-[70vh]">{children}</main>
-        <Footer />
+        {isAppShell ? (
+          children
+        ) : (
+          <>
+            <Header />
+            <main className="min-h-[70vh]">{children}</main>
+            <Footer />
+          </>
+        )}
+        <Suspense fallback={null}>
+          <Toasts />
+        </Suspense>
       </body>
     </html>
   );
