@@ -20,6 +20,7 @@ export default async function Header() {
         <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-slate-600">
           <Link href="/mau" className="hover:text-brand-700">Kho mẫu</Link>
           <Link href="/bang-gia" className="hover:text-brand-700">Bảng giá</Link>
+          <Link href="/tin-tuc" className="hover:text-brand-700">Tin tức</Link>
           <Link href="/#cach-hoat-dong" className="hover:text-brand-700">Cách hoạt động</Link>
           <Link href="/#faq" className="hover:text-brand-700">Hỏi đáp</Link>
         </nav>

@@ -17,7 +17,7 @@ export default async function Footer() {
           <ul className="mt-2 space-y-1 text-sm text-slate-500">
             <li><Link href="/mau" className="hover:text-brand-700">Kho mẫu website</Link></li>
             <li><Link href="/bang-gia" className="hover:text-brand-700">Bảng giá thuê</Link></li>
-            <li><Link href="/thue" className="hover:text-brand-700">Thuê website ngay</Link></li>
+            <li><Link href="/tin-tuc" className="hover:text-brand-700">Tin tức & hướng dẫn</Link></li>
           </ul>
         </div>
         <div>

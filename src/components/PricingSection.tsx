@@ -30,7 +30,7 @@ export default function PricingSection({ plans, durations }: { plans: Plan[]; du
               <li>Tài khoản quản trị: {p.cmsUsers}</li>
               {splitLines(p.features).slice(3).map((f) => <li key={f}>{f}</li>)}
             </ul>
-            <Link href={`/thue?goi=${p.slug}`} className={`${p.highlight ? "btn-primary" : "btn-ghost"} mt-5 mt-auto w-full`}>Thuê gói này</Link>
+            <Link href="/mau" className={`${p.highlight ? "btn-primary" : "btn-ghost"} mt-5 mt-auto w-full`}>Chọn mẫu để thuê</Link>
           </div>
         ))}
       </div>
