@@ -1,0 +1,164 @@
+// Nen tang cho thue website — web chinh (platform)
+// MVP: SQLite de chay ngay khong can cai server DB.
+// Production quy mo lon: doi provider sang "postgresql" + DATABASE_URL tuong ung.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         String        @default("CUSTOMER") // ADMIN | CUSTOMER
+  sessions     Session[]
+  orders       RentalOrder[]
+  sites        Site[]
+  createdAt    DateTime      @default(now())
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Template {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  category    String
+  description String
+  coverImage  String?
+  gallery     String        @default("") // moi URL 1 dong
+  features    String        @default("") // moi tinh nang 1 dong
+  demoUrl     String?
+  folderSlug  String? // thu muc src trong sites/ tuong ung, vd: sites/shop-thoi-trang
+  premium     Boolean       @default(false)
+  minPlanTier Int           @default(1) // tier goi toi thieu de dung mau nay
+  status      String        @default("PUBLISHED") // DRAFT | PUBLISHED
+  sort        Int           @default(0)
+  orders      RentalOrder[]
+  sites       Site[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Plan {
+  id           String        @id @default(cuid())
+  name         String
+  slug         String        @unique
+  tier         Int           @unique // 1,2,3,4... de so voi minPlanTier cua mau
+  priceMonth   Int // VND
+  storageGb    Int
+  bandwidthGb  Int // -1 = khong gioi han hop ly
+  pagesLimit   Int // -1 = khong gioi han
+  productsLimit Int // -1 = khong gioi han
+  cmsUsers     Int
+  domains      Int           @default(1)
+  features     String        @default("") // moi dong 1 tinh nang
+  excluded     String        @default("") // moi dong 1 tinh nang KHONG co
+  ecommerce    Boolean       @default(false)
+  highlight    Boolean       @default(false)
+  active       Boolean       @default(true)
+  sort         Int           @default(0)
+  orders       RentalOrder[]
+  sites        Site[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model DurationOption {
+  id              String  @id @default(cuid())
+  months          Int     @unique
+  discountPercent Int     @default(0)
+  label           String?
+  active          Boolean @default(true)
+  sort            Int     @default(0)
+}
+
+model Faq {
+  id       String  @id @default(cuid())
+  question String
+  answer   String
+  sort     Int     @default(0)
+  active   Boolean @default(true)
+}
+
+model RentalOrder {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  templateId      String
+  template        Template  @relation(fields: [templateId], references: [id])
+  planId          String
+  plan            Plan      @relation(fields: [planId], references: [id])
+  planName        String // snapshot luc dat
+  planPriceMonth  Int // snapshot
+  durationMonths  Int
+  discountPercent Int       @default(0)
+  total           Int // VND sau giam
+  siteName        String
+  domain          String
+  status          String    @default("CHO_THANH_TOAN") // CHO_THANH_TOAN | DA_THANH_TOAN | DA_HUY
+  note            String?
+  site            Site?
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Site {
+  id         String      @id @default(cuid())
+  userId     String
+  user       User        @relation(fields: [userId], references: [id])
+  orderId    String      @unique
+  order      RentalOrder @relation(fields: [orderId], references: [id])
+  templateId String
+  template   Template    @relation(fields: [templateId], references: [id])
+  planId     String
+  plan       Plan        @relation(fields: [planId], references: [id])
+  name       String
+  slug       String      @unique // ten mien tam: {slug}.{platformDomain}
+  domain     String
+  dnsToken   String
+  status     String      @default("CHO_TRO_DNS") // CHO_TRO_DNS | DANG_HOAT_DONG | TAM_NGUNG | HET_HAN
+  startedAt  DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model Setting {
+  id             String @id @default("main")
+  brandName      String @default("ThuêWeb")
+  logoUrl        String?
+  heroTitle      String @default("Thuê website theo mẫu — có web riêng trong vài phút")
+  heroSubtitle   String @default("Chọn mẫu, chọn gói, nhập tên miền của bạn. Hệ thống tự tạo website, bạn chỉ việc trỏ tên miền về Cloudflare theo hướng dẫn.")
+  heroCtaText    String @default("Xem kho mẫu")
+  supportEmail   String @default("hotro@example.com")
+  supportPhone   String @default("")
+  zaloUrl        String?
+  platformDomain String @default("thueweb.vn") // ten mien chinh cua nen tang: ten mien tam = {slug}.{platformDomain}
+  cnameTarget    String @default("connect.thueweb.vn") // gia tri CNAME khach tro ve
+  acmeTarget     String @default("acme.thueweb.vn") // gia tri CNAME _acme-challenge (delegated DCV)
+  bankCode       String @default("") // vd MB, VCB, TCB — dung de tao VietQR
+  bankAccount    String @default("")
+  bankOwner      String @default("")
+  trialDays      Int    @default(7)
+  graceDays      Int    @default(7)
+  archiveDays    Int    @default(30)
+  footerText     String @default("")
+  updatedAt      DateTime @updatedAt
+}

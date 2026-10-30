@@ -1,0 +1,138 @@
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+
+const prisma = new PrismaClient();
+
+async function main() {
+  // ---- Tai khoan admin mac dinh (DOI MAT KHAU NGAY sau khi dang nhap lan dau) ----
+  const adminHash = await bcrypt.hash("Admin@123", 10);
+  await prisma.user.upsert({
+    where: { email: "admin@thueweb.vn" },
+    update: {},
+    create: {
+      email: "admin@thueweb.vn",
+      passwordHash: adminHash,
+      name: "Quản trị viên",
+      role: "ADMIN",
+    },
+  });
+
+  // ---- Cai dat nen tang ----
+  await prisma.setting.upsert({ where: { id: "main" }, update: {}, create: { id: "main" } });
+
+  // ---- Goi thue (gia de xuat trong ke hoach 30/10/2026 — sua thoai mai trong Admin > Goi thue) ----
+  const plans = [
+    {
+      name: "Khởi nghiệp", slug: "khoi-nghiep", tier: 1, priceMonth: 149000,
+      storageGb: 5, bandwidthGb: 100, pagesLimit: 30, productsLimit: 50, cmsUsers: 2, domains: 1,
+      ecommerce: false, highlight: false, sort: 1,
+      features: "1 website\n1 tên miền riêng\n5 GB dung lượng\nForm liên hệ + hộp thư form\nSEO cơ bản\nSao lưu hàng tuần\nHỗ trợ ticket 24h",
+      excluded: "Bán hàng online\nMẫu Premium",
+    },
+    {
+      name: "Chuyên nghiệp", slug: "chuyen-nghiep", tier: 2, priceMonth: 299000,
+      storageGb: 20, bandwidthGb: 500, pagesLimit: -1, productsLimit: 500, cmsUsers: 5, domains: 1,
+      ecommerce: true, highlight: true, sort: 2,
+      features: "Mọi tính năng gói Khởi nghiệp\nDùng tất cả mẫu gồm Premium\n20 GB dung lượng\nBán hàng cơ bản (đơn hàng, COD/chuyển khoản)\nSEO nâng cao: sitemap, schema, redirect\nSao lưu hàng ngày, giữ 7 ngày\nHỗ trợ ticket + chat 12h",
+      excluded: "",
+    },
+    {
+      name: "Thương mại", slug: "thuong-mai", tier: 3, priceMonth: 499000,
+      storageGb: 50, bandwidthGb: 2000, pagesLimit: -1, productsLimit: 5000, cmsUsers: 10, domains: 2,
+      ecommerce: true, highlight: false, sort: 3,
+      features: "Mọi tính năng gói Chuyên nghiệp\n50 GB dung lượng\nBán hàng đầy đủ: cổng thanh toán, mã giảm giá, flash sale\nGỡ thương hiệu nền tảng\nSao lưu hàng ngày, giữ 30 ngày\nHỗ trợ ưu tiên 4h",
+      excluded: "",
+    },
+    {
+      name: "Doanh nghiệp", slug: "doanh-nghiep", tier: 4, priceMonth: 999000,
+      storageGb: 200, bandwidthGb: -1, pagesLimit: -1, productsLimit: -1, cmsUsers: 30, domains: 5,
+      ecommerce: true, highlight: false, sort: 4,
+      features: "Mọi tính năng gói Thương mại\n200 GB dung lượng\nNhiều tên miền\nSao lưu hàng ngày, giữ 90 ngày + khôi phục theo điểm\nHỗ trợ ưu tiên + hotline",
+      excluded: "",
+    },
+  ];
+  for (const p of plans) {
+    await prisma.plan.upsert({ where: { slug: p.slug }, update: {}, create: p });
+  }
+
+  // ---- Thoi han thue ----
+  const durations = [
+    { months: 1, discountPercent: 0, sort: 1 },
+    { months: 3, discountPercent: 5, sort: 2 },
+    { months: 6, discountPercent: 10, sort: 3 },
+    { months: 12, discountPercent: 20, sort: 4 },
+    { months: 24, discountPercent: 30, sort: 5 },
+  ];
+  for (const d of durations) {
+    await prisma.durationOption.upsert({ where: { months: d.months }, update: {}, create: d });
+  }
+
+  // ---- Mau website mau (admin sua/xoa/them trong Admin > Mau website) ----
+  const templates = [
+    {
+      name: "Shop Bán Hàng Tổng Hợp", slug: "shop-ban-hang-tong-hop", category: "Bán hàng",
+      description: "Mẫu thương mại điện tử đầy đủ: giỏ hàng, thanh toán, quản lý sản phẩm, đơn hàng, mã giảm giá. Phù hợp mọi ngành hàng.",
+      coverImage: "https://picsum.photos/seed/shop-tong-hop/900/560",
+      gallery: "https://picsum.photos/seed/shop-tong-hop-1/900/560\nhttps://picsum.photos/seed/shop-tong-hop-2/900/560",
+      features: "Giỏ hàng + thanh toán online\nQuản lý sản phẩm, tồn kho\nMã giảm giá, flash sale\nĐơn hàng + trạng thái giao hàng",
+      demoUrl: "", folderSlug: "shop-ban-hang", premium: false, minPlanTier: 2, sort: 1,
+    },
+    {
+      name: "Shop Sản Phẩm Số — Giao Key Tự Động", slug: "shop-san-pham-so", category: "Bán hàng",
+      description: "Bán tài khoản, key bản quyền, khoá học số: khách thanh toán xong hệ thống tự giao key/tài khoản qua email ngay lập tức.",
+      coverImage: "https://picsum.photos/seed/shop-so/900/560",
+      gallery: "https://picsum.photos/seed/shop-so-1/900/560",
+      features: "Giao key/tài khoản tự động sau thanh toán\nKho key theo FIFO\nThanh toán SePay/VietQR tự đối soát\nVí + điểm tích luỹ",
+      demoUrl: "", folderSlug: "shop-san-pham-so", premium: true, minPlanTier: 2, sort: 2,
+    },
+    {
+      name: "Doanh Nghiệp Giới Thiệu", slug: "doanh-nghiep-gioi-thieu", category: "Doanh nghiệp",
+      description: "Website công ty chuyên nghiệp: giới thiệu, dịch vụ, dự án đã làm, đội ngũ, tin tức và form liên hệ tư vấn.",
+      coverImage: "https://picsum.photos/seed/doanh-nghiep/900/560",
+      gallery: "https://picsum.photos/seed/doanh-nghiep-1/900/560",
+      features: "Trang dịch vụ + dự án\nBlog tin tức\nForm tư vấn đổ về hộp thư CMS\nĐa ngôn ngữ (tuỳ chọn)",
+      demoUrl: "", folderSlug: "doanh-nghiep", premium: false, minPlanTier: 1, sort: 3,
+    },
+    {
+      name: "Landing Page Bán Khoá Học", slug: "landing-khoa-hoc", category: "Landing page",
+      description: "Trang đích một trang tối ưu chuyển đổi: giới thiệu khoá học, học viên nói gì, bảng giá, đếm ngược ưu đãi, form đăng ký.",
+      coverImage: "https://picsum.photos/seed/landing-khoa/900/560",
+      gallery: "",
+      features: "Tối ưu chuyển đổi\nForm đăng ký + thông báo tức thì\nĐếm ngược khuyến mãi\nKết nối Pixel/Analytics",
+      demoUrl: "", folderSlug: "landing-khoa-hoc", premium: false, minPlanTier: 1, sort: 4,
+    },
+    {
+      name: "Nhà Hàng — Menu & Đặt Bàn", slug: "nha-hang-dat-ban", category: "Nhà hàng & F&B",
+      description: "Thực đơn trực tuyến đẹp mắt, đặt bàn online, giới thiệu không gian và chương trình ưu đãi theo tuần.",
+      coverImage: "https://picsum.photos/seed/nha-hang/900/560",
+      gallery: "https://picsum.photos/seed/nha-hang-1/900/560",
+      features: "Menu theo nhóm món, sửa giá trong CMS\nĐặt bàn online\nThư viện ảnh món ăn\nBản đồ + giờ mở cửa",
+      demoUrl: "", folderSlug: "nha-hang", premium: false, minPlanTier: 1, sort: 5,
+    },
+    {
+      name: "Spa & Làm Đẹp — Đặt Lịch", slug: "spa-dat-lich", category: "Dịch vụ",
+      description: "Giới thiệu dịch vụ, bảng giá, đội ngũ chuyên viên và đặt lịch hẹn trực tuyến có nhắc lịch tự động.",
+      coverImage: "https://picsum.photos/seed/spa/900/560",
+      gallery: "",
+      features: "Đặt lịch theo dịch vụ + chuyên viên\nBảng giá dịch vụ\nĐánh giá khách hàng\nNhắc lịch qua email",
+      demoUrl: "", folderSlug: "spa-lam-dep", premium: true, minPlanTier: 2, sort: 6,
+    },
+  ];
+  for (const t of templates) {
+    await prisma.template.upsert({ where: { slug: t.slug }, update: {}, create: t });
+  }
+
+  // ---- FAQ ----
+  const faqs = [
+    { question: "Tôi cần chuẩn bị gì trước khi thuê?", answer: "Bạn chỉ cần một tên miền riêng (mua ở bất kỳ nhà đăng ký nào) và đưa tên miền lên Cloudflare miễn phí. Sau khi thanh toán, hệ thống tự tạo website và hướng dẫn bạn thêm 3 bản ghi DNS — trang quản lý của bạn có hướng dẫn từng bước kèm nút Kiểm tra lại.", sort: 1 },
+    { question: "Bao lâu thì website hoạt động?", answer: "Website được tạo tự động trong khoảng 1 phút sau khi thanh toán được xác nhận, truy cập ngay qua tên miền tạm. Khi bạn trỏ DNS xong và SSL được cấp (thường vài phút đến vài giờ tuỳ DNS), website chạy chính thức trên tên miền của bạn. Thời hạn thuê chỉ bắt đầu tính từ ngày tên miền chính thức hoạt động.", sort: 2 },
+    { question: "Tên miền có thuộc về tôi không?", answer: "Có, 100%. Tên miền do bạn mua và quản lý bằng tài khoản Cloudflare của bạn. Chúng tôi không giữ tên miền, không giữ dữ liệu — bạn xuất toàn bộ nội dung website của mình bất cứ lúc nào.", sort: 3 },
+    { question: "Hết hạn thuê thì sao?", answer: "Hệ thống nhắc bạn trước 30/7/3/1 ngày. Sau ngày hết hạn còn 7 ngày ân hạn website vẫn chạy. Quá ân hạn, website tạm ngưng nhưng dữ liệu được giữ thêm 30 ngày — gia hạn trong thời gian này là khôi phục nguyên trạng.", sort: 4 },
+    { question: "Tôi có được cấp mã nguồn (source code) không?", answer: "Không. Đây là dịch vụ cho thuê website chạy trên hạ tầng của chúng tôi — bạn được toàn quyền quản trị nội dung qua CMS, không cần lo server, bảo mật hay cập nhật. Nếu muốn mua đứt mã nguồn, vui lòng liên hệ để được tư vấn gói riêng.", sort: 5 },
+  ];
+  if ((await prisma.faq.count()) === 0) await prisma.faq.createMany({ data: faqs });
+
+  console.log("Seed xong: admin@thueweb.vn / Admin@123 (doi mat khau ngay!)");
+}
+
+main().finally(() => prisma.$disconnect());
