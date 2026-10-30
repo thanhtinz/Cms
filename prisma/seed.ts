@@ -132,6 +132,63 @@ async function main() {
   ];
   if ((await prisma.faq.count()) === 0) await prisma.faq.createMany({ data: faqs });
 
+  // ---- Voucher mau (sua/xoa/them trong Admin > Voucher) ----
+  const in90Days = new Date(Date.now() + 90 * 24 * 3600 * 1000);
+  const vouchers = [
+    {
+      code: "WEBSITE10", description: "Ưu đãi khách mới — giảm 10% đơn thuê đầu tiên",
+      type: "PERCENT", value: 10, maxDiscount: 300000, minTotal: 0, usageLimit: 0, expiresAt: null as Date | null,
+    },
+    {
+      code: "KHAITRUONG", description: "Mừng khai trương — giảm thẳng 100.000 ₫ cho đơn từ 1.000.000 ₫",
+      type: "FIXED", value: 100000, maxDiscount: 0, minTotal: 1000000, usageLimit: 200, expiresAt: in90Days,
+    },
+    {
+      code: "THUEDAI25", description: "Thuê dài hạn — giảm 25%, tối đa 500.000 ₫",
+      type: "PERCENT", value: 25, maxDiscount: 500000, minTotal: 2000000, usageLimit: 0, expiresAt: in90Days,
+    },
+  ];
+  for (const v of vouchers) {
+    await prisma.voucher.upsert({ where: { code: v.code }, update: {}, create: v });
+  }
+
+  // ---- Bai viet mau (sua/xoa/them trong Admin > Tin tuc) ----
+  const posts = [
+    {
+      title: "Hướng dẫn đưa tên miền lên Cloudflare trong 5 phút",
+      slug: "huong-dan-dua-ten-mien-len-cloudflare",
+      category: "Hướng dẫn",
+      excerpt: "Tên miền là điều kiện duy nhất bạn cần chuẩn bị trước khi thuê website. Bài này hướng dẫn từng bước đưa tên miền lên Cloudflare miễn phí và giải thích vì sao hệ thống cần 3 bản ghi DNS.",
+      coverImage: "https://picsum.photos/seed/tin-cloudflare/900/500",
+      sort: 1,
+      content:
+        "Để website thuê chạy trên tên miền riêng của bạn, tên miền cần được quản lý DNS tại Cloudflare. Đây là dịch vụ miễn phí, bạn giữ toàn quyền sở hữu tên miền và có thể rời đi bất cứ lúc nào.\n\nBước 1: tạo tài khoản Cloudflare và bấm Add a site, nhập tên miền của bạn. Cloudflare sẽ quét các bản ghi DNS hiện có.\n\nBước 2: đổi nameserver tại nhà đăng ký tên miền theo 2 nameserver Cloudflare cấp. Thời gian cập nhật thường từ vài phút tới vài giờ.\n\nBước 3: sau khi thanh toán thuê website, vào trang quản lý của bạn trên nền tảng — hệ thống hiện sẵn đúng 3 bản ghi cần thêm: một CNAME trỏ về nền tảng, một TXT chứng minh bạn là chủ tên miền, và một CNAME uỷ quyền cấp SSL. Thêm xong bấm Kiểm tra lại.\n\nKhi DNS đạt, chứng chỉ SSL được cấp tự động và hạn thuê của bạn mới bắt đầu được tính — bạn không mất một ngày thuê nào cho khâu chuẩn bị.",
+    },
+    {
+      title: "Thuê website khác gì tự làm website? So sánh chi phí thật sau 1 năm",
+      slug: "thue-website-khac-gi-tu-lam-website",
+      category: "Kinh nghiệm",
+      excerpt: "Tự làm website nghe có vẻ rẻ hơn, nhưng hãy cộng đủ: tên miền, hosting, SSL, theme, chi phí bảo trì và thời gian. Bài này bóc tách con số thật của cả hai cách sau 12 tháng.",
+      coverImage: "https://picsum.photos/seed/tin-so-sanh/900/500",
+      sort: 2,
+      content:
+        "Rất nhiều chủ shop bắt đầu bằng ý định tự làm website để tiết kiệm, rồi bỏ cuộc ở khâu cài đặt hoặc để website chết dần vì không ai bảo trì. Hãy nhìn vào con số.\n\nTự làm: tên miền khoảng 250.000–350.000 ₫/năm, hosting tử tế 1.200.000–3.000.000 ₫/năm, theme đẹp 1.000.000–2.000.000 ₫ mua một lần, chưa kể công cài đặt, cấu hình thanh toán, xử lý khi web bị hack hoặc hết hạn SSL. Tổng năm đầu thường 3–6 triệu đồng và rất nhiều giờ tự học.\n\nThuê website: một khoản cố định theo tháng đã gồm hạ tầng, SSL, sao lưu, cập nhật bảo mật và hỗ trợ. Bạn chỉ việc đăng sản phẩm và bán hàng. Website được tạo tự động trong vài phút, nâng/hạ gói linh hoạt theo quy mô kinh doanh.\n\nKết luận thực tế: nếu bạn có đội kỹ thuật riêng, tự vận hành có thể là lựa chọn dài hạn. Nếu bạn là chủ shop, chủ doanh nghiệp nhỏ cần web để bán hàng ngay, thuê website là cách rẻ và nhanh hơn rõ rệt khi tính đủ chi phí ẩn.",
+    },
+    {
+      title: "Ra mắt tính năng voucher: giảm giá trực tiếp ngay trong form thuê",
+      slug: "ra-mat-tinh-nang-voucher",
+      category: "Tin tức",
+      excerpt: "Từ hôm nay, các mã ưu đãi của nền tảng hiển thị ngay trên trang chủ — sao chép mã, nhập vào bước thuê trong trang chi tiết mẫu, hệ thống tự trừ tiền và hiện rõ từng khoản giảm.",
+      coverImage: "https://picsum.photos/seed/tin-voucher/900/500",
+      sort: 3,
+      content:
+        "Nền tảng vừa bổ sung hệ thống voucher hoàn chỉnh: mỗi mã có thể giảm theo phần trăm hoặc giảm thẳng một số tiền, kèm trần giảm tối đa, mức đơn tối thiểu, giới hạn lượt dùng và thời hạn áp dụng.\n\nCách dùng rất đơn giản: ở mục Ưu đãi đang chạy trên trang chủ, bấm Sao chép mã. Khi thuê website trong trang chi tiết của mẫu, nhập mã vào ô voucher ở cột đơn thuê — hệ thống kiểm tra ngay và trừ trực tiếp vào tổng thanh toán, hiện tách bạch với chiết khấu theo thời hạn thuê.\n\nCác chương trình ưu đãi sẽ thay đổi theo thời gian, nhớ ghé trang chủ thường xuyên để không bỏ lỡ mã tốt nhất cho đơn thuê của bạn.",
+    },
+  ];
+  for (const p of posts) {
+    await prisma.newsPost.upsert({ where: { slug: p.slug }, update: {}, create: p });
+  }
+
   console.log("Seed xong: admin@thueweb.vn / Admin@123 (doi mat khau ngay!)");
 }
 

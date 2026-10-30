@@ -23,6 +23,16 @@ export function splitLines(s: string | null | undefined): string[] {
   return (s ?? "").split("\n").map((x) => x.trim()).filter(Boolean);
 }
 
+// Gia thue/thang thap nhat cho 1 mau = gia goi re nhat du tier yeu cau
+export function minPriceFor(
+  minTier: number,
+  plans: { tier: number; priceMonth: number; active: boolean }[]
+): number | null {
+  const ok = plans.filter((p) => p.active && p.tier >= minTier);
+  if (ok.length === 0) return null;
+  return Math.min(...ok.map((p) => p.priceMonth));
+}
+
 export function limitText(n: number): string {
   return n === -1 ? "Không giới hạn" : String(n);
 }

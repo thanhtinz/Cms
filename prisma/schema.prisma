@@ -106,8 +106,13 @@ model RentalOrder {
   planName        String // snapshot luc dat
   planPriceMonth  Int // snapshot
   durationMonths  Int
-  discountPercent Int       @default(0)
-  total           Int // VND sau giam
+  discountPercent Int       @default(0) // chiet khau theo thoi han
+  subtotal        Int       @default(0) // VND sau chiet khau thoi han, truoc voucher
+  voucherId       String?
+  voucher         Voucher?  @relation(fields: [voucherId], references: [id])
+  voucherCode     String? // snapshot ma voucher luc dat
+  voucherDiscount Int       @default(0) // VND duoc giam tu voucher
+  total           Int // VND phai tra cuoi cung
   siteName        String
   domain          String
   status          String    @default("CHO_THANH_TOAN") // CHO_THANH_TOAN | DA_THANH_TOAN | DA_HUY
@@ -116,6 +121,38 @@ model RentalOrder {
   paidAt          DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+}
+
+model Voucher {
+  id          String        @id @default(cuid())
+  code        String        @unique
+  description String        @default("")
+  type        String        @default("PERCENT") // PERCENT: giam % | FIXED: giam thang VND
+  value       Int // PERCENT: 1-100 | FIXED: so VND
+  maxDiscount Int           @default(0) // PERCENT: tran giam VND, 0 = khong tran
+  minTotal    Int           @default(0) // don (sau chiet khau thoi han) toi thieu de dung
+  usageLimit  Int           @default(0) // 0 = khong gioi han luot dung
+  usedCount   Int           @default(0)
+  startsAt    DateTime?
+  expiresAt   DateTime?
+  active      Boolean       @default(true)
+  orders      RentalOrder[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model NewsPost {
+  id         String   @id @default(cuid())
+  title      String
+  slug       String   @unique
+  excerpt    String   @default("")
+  content    String   @default("") // cac doan van cach nhau bang 1 dong trong
+  coverImage String?
+  category   String   @default("Tin tức")
+  published  Boolean  @default(true)
+  sort       Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Site {
