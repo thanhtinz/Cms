@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
+
+// Toan bo nen tang doc du lieu dong (cai dat, nguoi dung) — khong prerender tinh.
+export const dynamic = "force-dynamic";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { getSettings } from "@/lib/db";

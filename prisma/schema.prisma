@@ -1,13 +1,12 @@
 // Nen tang cho thue website — web chinh (platform)
-// MVP: SQLite de chay ngay khong can cai server DB.
-// Production quy mo lon: doi provider sang "postgresql" + DATABASE_URL tuong ung.
+// Database: PostgreSQL (Neon tren Vercel). DATABASE_URL lay tu bien moi truong.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

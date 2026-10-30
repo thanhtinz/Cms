@@ -1,0 +1,1 @@
+{"buildCommand":"DATABASE_URL=${DATABASE_URL_UNPOOLED:-$DATABASE_URL} npx prisma db push --skip-generate && DATABASE_URL=${DATABASE_URL_UNPOOLED:-$DATABASE_URL} npx prisma db seed && npm run build","framework":"nextjs"}

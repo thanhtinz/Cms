@@ -12,8 +12,10 @@ Web chính của nền tảng cho thuê website: khách chọn mẫu → chọn 
 
 ## Chạy local
 
+Cần một PostgreSQL (Neon free / Supabase / Postgres cài local):
+
 ```bash
-cp .env.example .env
+cp .env.example .env   # điền DATABASE_URL của bạn
 npm install
 npm run db:setup   # generate + tạo bảng + seed
 npm run dev        # http://localhost:3000
@@ -21,7 +23,11 @@ npm run dev        # http://localhost:3000
 
 Tài khoản admin seed: `admin@thueweb.vn` / `Admin@123` — **đổi mật khẩu ngay** (tạo user ADMIN mới rồi xoá tài khoản này khi lên production).
 
-Database MVP dùng SQLite (`DATABASE_URL="file:./dev.db"`) để chạy ngay không cần cài server DB. Khi lên production quy mô lớn: đổi `provider` trong `prisma/schema.prisma` sang `postgresql` và trỏ `DATABASE_URL` về Postgres (Neon/Supabase/VPS), rồi `prisma db push` lại.
+## Deploy Vercel
+
+1. Import repo này vào Vercel (framework Next.js).
+2. Gắn **Neon Postgres** (Storage → Create → Neon) cho Production + Preview — Neon tự cấp `DATABASE_URL` và `DATABASE_URL_UNPOOLED`.
+3. `vercel.json` đã đặt Build Command tự chạy `prisma db push` + `prisma db seed` (seed idempotent, chạy lại an toàn) trước `next build` — không cần thao tác tay.
 
 ## Luồng nghiệp vụ đã chạy được
 
