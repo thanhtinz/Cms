@@ -25,6 +25,9 @@ export default async function AdminOrderDetail({ params, searchParams }: { param
         <div><span className="text-slate-500">Trạng thái đơn:</span> <b>{ORDER_STATUS[order.status] ?? order.status}</b>{order.paidAt ? ` · đã thu ${formatDate(order.paidAt)}` : ""}</div>
         <div><span className="text-slate-500">Mẫu:</span> <b>{order.template.name}</b> (src: sites/{order.template.folderSlug ?? "—"})</div>
         <div><span className="text-slate-500">Gói:</span> <b>{order.planName}</b> — {formatVND(order.planPriceMonth)}/tháng × {order.durationMonths} tháng{order.discountPercent > 0 ? ` −${order.discountPercent}%` : ""}</div>
+        {order.voucherCode && (
+          <div><span className="text-slate-500">Voucher:</span> <b className="font-mono">{order.voucherCode}</b> — giảm {formatVND(order.voucherDiscount)}{order.subtotal > 0 ? ` (tính trên ${formatVND(order.subtotal)})` : ""}</div>
+        )}
         <div><span className="text-slate-500">Tên website:</span> <b>{order.siteName}</b></div>
         <div><span className="text-slate-500">Tên miền khách:</span> <b>{order.domain}</b></div>
         <div><span className="text-slate-500">Tổng tiền:</span> <b className="text-brand-700">{formatVND(order.total)}</b></div>

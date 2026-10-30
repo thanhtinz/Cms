@@ -28,6 +28,9 @@ export default async function OrderDonePage({ params }: { params: { code: string
         <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
           <div><dt className="text-slate-500">Mẫu website</dt><dd className="font-medium">{order.template.name}</dd></div>
           <div><dt className="text-slate-500">Gói thuê</dt><dd className="font-medium">{order.planName} — {order.durationMonths} tháng</dd></div>
+          {order.voucherCode && (
+            <div><dt className="text-slate-500">Voucher đã dùng</dt><dd className="font-medium text-emerald-600">{order.voucherCode} — giảm {formatVND(order.voucherDiscount)}</dd></div>
+          )}
           <div><dt className="text-slate-500">Tên website</dt><dd className="font-medium">{order.siteName}</dd></div>
           <div><dt className="text-slate-500">Tên miền</dt><dd className="font-medium">{order.domain}</dd></div>
           <div><dt className="text-slate-500">Ngày đặt</dt><dd className="font-medium">{formatDate(order.createdAt)}</dd></div>

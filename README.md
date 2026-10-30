@@ -29,6 +29,13 @@ Tài khoản admin seed: `admin@thueweb.vn` / `Admin@123` — **đổi mật kh�
 2. Gắn **Neon Postgres** (Storage → Create → Neon) cho Production + Preview — Neon tự cấp `DATABASE_URL` và `DATABASE_URL_UNPOOLED`.
 3. `vercel.json` đã đặt Build Command tự chạy `prisma db push` + `prisma db seed` (seed idempotent, chạy lại an toàn) trước `next build` — không cần thao tác tay.
 
+## Tính năng chính
+
+- **Thuê ngay trong trang chi tiết mẫu** (`/mau/[slug]`): xem gallery, tính năng, giá từ gói tối thiểu — rồi chọn gói + thời hạn + voucher + tên miền và đặt thuê tại chỗ, không có trang thuê riêng.
+- **Voucher giảm giá**: Admin tạo mã (giảm % hoặc giảm thẳng, trần giảm, đơn tối thiểu, giới hạn lượt, thời hạn). Mã đang chạy hiện ở trang chủ để khách sao chép; khách nhập mã trong form thuê, hệ thống kiểm tra trực tiếp và trừ vào tổng (sau chiết khấu thời hạn). Huỷ đơn tự hoàn lượt dùng.
+- **Tin tức**: Admin viết bài (tiêu đề, slug, chuyên mục, ảnh bìa, tóm tắt, nội dung) — đăng ở `/tin-tuc` và mục tin mới trên trang chủ.
+- Toàn bộ nội dung (mẫu, gói, thời hạn, FAQ, voucher, tin tức, cài đặt thương hiệu/thanh toán/DNS) đều cấu hình trong Admin.
+
 ## Luồng nghiệp vụ đã chạy được
 
 1. Khách xem kho mẫu/bảng giá (dữ liệu thật từ DB) → đặt thuê: chọn mẫu, gói, thời hạn → nhập tên website + tên miền → **kiểm tra tên miền trực tiếp** (định dạng, đã dùng trong hệ thống chưa, đã ở trên Cloudflare chưa, đã trỏ về nền tảng chưa — tra DNS qua Cloudflare DoH).

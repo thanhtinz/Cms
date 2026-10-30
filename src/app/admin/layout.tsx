@@ -9,6 +9,8 @@ const menu = [
   { href: "/admin/don-thue", label: "Đơn thuê" },
   { href: "/admin/website", label: "Website khách" },
   { href: "/admin/khach-hang", label: "Khách hàng" },
+  { href: "/admin/voucher", label: "Voucher giảm giá" },
+  { href: "/admin/tin-tuc", label: "Tin tức" },
   { href: "/admin/faq", label: "Hỏi đáp (FAQ)" },
   { href: "/admin/cai-dat", label: "Cài đặt hệ thống" },
 ];
