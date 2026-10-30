@@ -132,6 +132,38 @@ async function main() {
   ];
   if ((await prisma.faq.count()) === 0) await prisma.faq.createMany({ data: faqs });
 
+  // ---- Goi thoi gian (mo hinh gia hien tai — sua/xoa/them trong Admin > Goi thoi gian) ----
+  const timePackages = [
+    {
+      name: "Gói 1 Tháng", slug: "goi-1-thang", months: 1, price: 199000, compareAt: 0, tier: 1,
+      storageGb: 5, bandwidthGb: 100, pagesLimit: 30, productsLimit: 50, cmsUsers: 2, ecommerce: false, highlight: false, sort: 1,
+      features: "1 website + tên miền riêng\n5 GB dung lượng\nForm liên hệ\nSEO cơ bản\nSao lưu hàng tuần",
+    },
+    {
+      name: "Gói 3 Tháng", slug: "goi-3-thang", months: 3, price: 449000, compareAt: 597000, tier: 1,
+      storageGb: 10, bandwidthGb: 300, pagesLimit: -1, productsLimit: 200, cmsUsers: 3, ecommerce: true, highlight: false, sort: 2,
+      features: "Mọi quyền lợi gói 1 tháng\n10 GB dung lượng\nBán hàng cơ bản (đơn hàng, COD/chuyển khoản)\nSao lưu hàng tuần",
+    },
+    {
+      name: "Gói 6 Tháng", slug: "goi-6-thang", months: 6, price: 799000, compareAt: 1194000, tier: 2,
+      storageGb: 20, bandwidthGb: 500, pagesLimit: -1, productsLimit: 500, cmsUsers: 5, ecommerce: true, highlight: true, sort: 3,
+      features: "Dùng tất cả mẫu gồm Premium\n20 GB dung lượng\nBán hàng đầy đủ: mã giảm giá, flash sale\nSEO nâng cao: sitemap, schema\nSao lưu hàng ngày, giữ 7 ngày",
+    },
+    {
+      name: "Gói 12 Tháng", slug: "goi-12-thang", months: 12, price: 1399000, compareAt: 2388000, tier: 2,
+      storageGb: 50, bandwidthGb: 2000, pagesLimit: -1, productsLimit: 5000, cmsUsers: 10, ecommerce: true, highlight: false, sort: 4,
+      features: "Mọi quyền lợi gói 6 tháng\n50 GB dung lượng\nCổng thanh toán online\nGỡ thương hiệu nền tảng\nSao lưu hàng ngày, giữ 30 ngày",
+    },
+    {
+      name: "Gói 24 Tháng", slug: "goi-24-thang", months: 24, price: 2399000, compareAt: 4776000, tier: 3,
+      storageGb: 200, bandwidthGb: -1, pagesLimit: -1, productsLimit: -1, cmsUsers: 30, ecommerce: true, highlight: false, sort: 5,
+      features: "Mọi quyền lợi gói 12 tháng\n200 GB dung lượng, băng thông không giới hạn hợp lý\nNhiều tên miền\nSao lưu giữ 90 ngày + khôi phục theo điểm\nHỗ trợ ưu tiên + hotline",
+    },
+  ];
+  for (const p of timePackages) {
+    await prisma.timePackage.upsert({ where: { slug: p.slug }, update: {}, create: p });
+  }
+
   // ---- Voucher mau (sua/xoa/them trong Admin > Voucher) ----
   const in90Days = new Date(Date.now() + 90 * 24 * 3600 * 1000);
   const vouchers = [

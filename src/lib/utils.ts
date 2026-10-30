@@ -23,14 +23,15 @@ export function splitLines(s: string | null | undefined): string[] {
   return (s ?? "").split("\n").map((x) => x.trim()).filter(Boolean);
 }
 
-// Gia thue/thang thap nhat cho 1 mau = gia goi re nhat du tier yeu cau
-export function minPriceFor(
+// Goi thoi gian re nhat dung duoc cho 1 mau (du tier yeu cau)
+export function cheapestPackageFor(
   minTier: number,
-  plans: { tier: number; priceMonth: number; active: boolean }[]
-): number | null {
-  const ok = plans.filter((p) => p.active && p.tier >= minTier);
+  packages: { tier: number; price: number; months: number; active: boolean }[]
+): { price: number; months: number } | null {
+  const ok = packages.filter((p) => p.active && p.tier >= minTier);
   if (ok.length === 0) return null;
-  return Math.min(...ok.map((p) => p.priceMonth));
+  const best = ok.reduce((a, b) => (b.price < a.price ? b : a));
+  return { price: best.price, months: best.months };
 }
 
 export function limitText(n: number): string {

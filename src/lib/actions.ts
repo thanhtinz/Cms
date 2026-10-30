@@ -50,23 +50,20 @@ function genOrderCode() {
 export async function createOrderAction(formData: FormData) {
   const user = await getCurrentUser();
   const templateId = String(formData.get("templateId") ?? "");
-  const planId = String(formData.get("planId") ?? "");
-  const months = Number(formData.get("months") ?? 1);
+  const timePackageId = String(formData.get("timePackageId") ?? "");
   const siteName = String(formData.get("siteName") ?? "").trim();
   const domain = normalizeDomain(String(formData.get("domain") ?? ""));
   const voucherCode = String(formData.get("voucherCode") ?? "").trim();
   const back = String(formData.get("back") ?? "/mau");
 
   if (!user) redirect(`/dang-nhap?tieptuc=${encodeURIComponent(back)}`);
-  const [template, plan, duration] = await Promise.all([
+  const [template, pkg] = await Promise.all([
     prisma.template.findUnique({ where: { id: templateId } }),
-    prisma.plan.findUnique({ where: { id: planId } }),
-    prisma.durationOption.findUnique({ where: { months } }),
+    prisma.timePackage.findUnique({ where: { id: timePackageId } }),
   ]);
   if (!template || template.status !== "PUBLISHED") redirect(`${back}?loi=Mẫu website không hợp lệ`);
-  if (!plan || !plan.active) redirect(`${back}?loi=Gói thuê không hợp lệ`);
-  if (plan.tier < template.minPlanTier) redirect(`${back}?loi=Mẫu này cần gói tối thiểu tier ${template.minPlanTier}`);
-  if (!duration || !duration.active) redirect(`${back}?loi=Thời hạn thuê không hợp lệ`);
+  if (!pkg || !pkg.active) redirect(`${back}?loi=Gói thời gian không hợp lệ`);
+  if (pkg.tier < template.minPlanTier) redirect(`${back}?loi=Mẫu này cần gói thời gian từ tier ${template.minPlanTier} trở lên`);
   if (!siteName) redirect(`${back}?loi=Vui lòng nhập tên website`);
   if (!domain) redirect(`${back}?loi=Vui lòng nhập tên miền của bạn`);
 
@@ -74,8 +71,8 @@ export async function createOrderAction(formData: FormData) {
   const dupOrder = await prisma.rentalOrder.findFirst({ where: { domain, status: { not: "DA_HUY" } } });
   if (dup || dupOrder) redirect(`${back}?loi=Tên miền này đã được dùng trong hệ thống`);
 
-  const gross = plan.priceMonth * months;
-  const subtotal = Math.round((gross * (100 - duration.discountPercent)) / 100);
+  // Gia theo goi thoi gian: tong tron goi, khong nhan thang x chiet khau nua
+  const subtotal = pkg.price;
 
   // Voucher: server tu kiem tra lai (khong tin so client gui len)
   let voucherId: string | null = null;
@@ -95,11 +92,11 @@ export async function createOrderAction(formData: FormData) {
       code: genOrderCode(),
       userId: user.id,
       templateId: template.id,
-      planId: plan.id,
-      planName: plan.name,
-      planPriceMonth: plan.priceMonth,
-      durationMonths: months,
-      discountPercent: duration.discountPercent,
+      timePackageId: pkg.id,
+      planName: pkg.name,
+      planPriceMonth: Math.round(pkg.price / pkg.months),
+      durationMonths: pkg.months,
+      discountPercent: 0,
       subtotal,
       voucherId,
       voucherCode: voucherCodeSaved,
@@ -244,6 +241,51 @@ export async function deleteFaqAction(formData: FormData) {
   redirect("/admin/faq");
 }
 
+// ---------- ADMIN: GOI THOI GIAN ----------
+export async function saveTimePackageAction(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) redirect("/admin/goi-thoi-gian?loi=Vui lòng nhập tên gói");
+  const data = {
+    name,
+    slug: slugify(String(formData.get("slug") ?? "") || name),
+    months: Math.max(1, Number(formData.get("months") ?? 1)),
+    price: Math.max(0, Number(formData.get("price") ?? 0)),
+    compareAt: Math.max(0, Number(formData.get("compareAt") ?? 0)),
+    tier: Math.max(1, Number(formData.get("tier") ?? 1)),
+    storageGb: Number(formData.get("storageGb") ?? 5),
+    bandwidthGb: Number(formData.get("bandwidthGb") ?? 100),
+    pagesLimit: Number(formData.get("pagesLimit") ?? -1),
+    productsLimit: Number(formData.get("productsLimit") ?? -1),
+    cmsUsers: Number(formData.get("cmsUsers") ?? 2),
+    ecommerce: formData.get("ecommerce") === "on",
+    features: String(formData.get("features") ?? ""),
+    highlight: formData.get("highlight") === "on",
+    active: formData.get("active") === "on",
+    sort: Number(formData.get("sort") ?? 0),
+  };
+  const dup = await prisma.timePackage.findUnique({ where: { slug: data.slug } });
+  if (dup && dup.id !== id) redirect("/admin/goi-thoi-gian?loi=Slug gói đã tồn tại");
+  if (id) await prisma.timePackage.update({ where: { id }, data });
+  else await prisma.timePackage.create({ data });
+  revalidatePath("/admin/goi-thoi-gian");
+  revalidatePath("/bang-gia");
+  revalidatePath("/mau");
+  redirect("/admin/goi-thoi-gian?ok=Đã lưu gói " + name);
+}
+
+export async function deleteTimePackageAction(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const used = await prisma.rentalOrder.count({ where: { timePackageId: id } });
+  if (used > 0) redirect("/admin/goi-thoi-gian?loi=Gói đã có đơn thuê, không xoá được — hãy tắt Kích hoạt");
+  await prisma.timePackage.delete({ where: { id } });
+  revalidatePath("/admin/goi-thoi-gian");
+  revalidatePath("/bang-gia");
+  redirect("/admin/goi-thoi-gian?ok=Đã xoá gói");
+}
+
 // ---------- ADMIN: VOUCHER ----------
 function dateOrNull(v: FormDataEntryValue | null): Date | null {
   const s = String(v ?? "").trim();
@@ -380,6 +422,7 @@ export async function confirmPaymentAction(formData: FormData) {
         orderId: order.id,
         templateId: order.templateId,
         planId: order.planId,
+        timePackageId: order.timePackageId,
         name: order.siteName,
         slug,
         domain: order.domain,

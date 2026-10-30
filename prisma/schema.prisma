@@ -77,6 +77,32 @@ model Plan {
   updatedAt    DateTime      @updatedAt
 }
 
+// Goi thoi gian: khach chon 1 goi duy nhat — da gom so thang + tong gia tron goi.
+// (Thay cho mo hinh cu: chon Plan theo thang x DurationOption chiet khau.)
+model TimePackage {
+  id            String        @id @default(cuid())
+  name          String
+  slug          String        @unique
+  months        Int // so thang su dung cua goi
+  price         Int // VND — tong gia tron goi (khong phai gia/thang)
+  compareAt     Int           @default(0) // gia goc gach ngang de so sanh, 0 = khong hien
+  tier          Int           @default(1) // cap dich vu — so voi minPlanTier cua mau
+  storageGb     Int           @default(5)
+  bandwidthGb   Int           @default(100) // -1 = khong gioi han hop ly
+  pagesLimit    Int           @default(-1)
+  productsLimit Int           @default(-1)
+  cmsUsers      Int           @default(2)
+  ecommerce     Boolean       @default(false)
+  features      String        @default("") // moi dong 1 tinh nang
+  highlight     Boolean       @default(false)
+  active        Boolean       @default(true)
+  sort          Int           @default(0)
+  orders        RentalOrder[]
+  sites         Site[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
 model DurationOption {
   id              String  @id @default(cuid())
   months          Int     @unique
@@ -101,10 +127,12 @@ model RentalOrder {
   user            User      @relation(fields: [userId], references: [id])
   templateId      String
   template        Template  @relation(fields: [templateId], references: [id])
-  planId          String
-  plan            Plan      @relation(fields: [planId], references: [id])
-  planName        String // snapshot luc dat
-  planPriceMonth  Int // snapshot
+  planId          String?
+  plan            Plan?       @relation(fields: [planId], references: [id])
+  timePackageId   String?
+  timePackage     TimePackage? @relation(fields: [timePackageId], references: [id])
+  planName        String // snapshot luc dat (ten goi thoi gian voi don moi)
+  planPriceMonth  Int // snapshot (don moi: gia goi quy doi/thang lam tron)
   durationMonths  Int
   discountPercent Int       @default(0) // chiet khau theo thoi han
   subtotal        Int       @default(0) // VND sau chiet khau thoi han, truoc voucher
@@ -163,8 +191,10 @@ model Site {
   order      RentalOrder @relation(fields: [orderId], references: [id])
   templateId String
   template   Template    @relation(fields: [templateId], references: [id])
-  planId     String
-  plan       Plan        @relation(fields: [planId], references: [id])
+  planId     String?
+  plan       Plan?       @relation(fields: [planId], references: [id])
+  timePackageId String?
+  timePackage   TimePackage? @relation(fields: [timePackageId], references: [id])
   name       String
   slug       String      @unique // ten mien tam: {slug}.{platformDomain}
   domain     String
