@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminOrderDetail({ params, searchParams }: { params: { id: string }; searchParams: { ok?: string } }) {
   const order = await prisma.rentalOrder.findUnique({
     where: { id: params.id },
-    include: { user: true, template: true, plan: true, site: true },
+    include: { user: true, template: true, plan: true, timePackage: true, site: true },
   });
   if (!order) notFound();
   const s = await getSettings();
@@ -24,7 +24,9 @@ export default async function AdminOrderDetail({ params, searchParams }: { param
         <div><span className="text-slate-500">Khách hàng:</span> <b>{order.user.name}</b> · {order.user.email}{order.user.phone ? ` · ${order.user.phone}` : ""}</div>
         <div><span className="text-slate-500">Trạng thái đơn:</span> <b>{ORDER_STATUS[order.status] ?? order.status}</b>{order.paidAt ? ` · đã thu ${formatDate(order.paidAt)}` : ""}</div>
         <div><span className="text-slate-500">Mẫu:</span> <b>{order.template.name}</b> (src: sites/{order.template.folderSlug ?? "—"})</div>
-        <div><span className="text-slate-500">Gói:</span> <b>{order.planName}</b> — {formatVND(order.planPriceMonth)}/tháng × {order.durationMonths} tháng{order.discountPercent > 0 ? ` −${order.discountPercent}%` : ""}</div>
+        <div><span className="text-slate-500">Gói:</span> <b>{order.planName}</b>{order.timePackageId
+          ? <> — gói thời gian {order.durationMonths} tháng, trọn gói {order.subtotal > 0 ? formatVND(order.subtotal) : formatVND(order.total + order.voucherDiscount)}</>
+          : <> — {formatVND(order.planPriceMonth)}/tháng × {order.durationMonths} tháng{order.discountPercent > 0 ? ` −${order.discountPercent}%` : ""} <span className="text-slate-400">(đơn theo mô hình cũ)</span></>}</div>
         {order.voucherCode && (
           <div><span className="text-slate-500">Voucher:</span> <b className="font-mono">{order.voucherCode}</b> — giảm {formatVND(order.voucherDiscount)}{order.subtotal > 0 ? ` (tính trên ${formatVND(order.subtotal)})` : ""}</div>
         )}

@@ -84,7 +84,7 @@ export default async function AdminVouchers({ searchParams }: { searchParams: { 
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked className="h-4 w-4" /> Kích hoạt ngay</label>
           <button className="btn-primary">Tạo voucher</button>
-          <span className="text-xs text-slate-400">Đơn mẫu kiểm tra: thuê gói 299.000 ₫/tháng × 12 tháng giảm 20% còn {formatVND(2870400)} — voucher 10% sẽ giảm thêm 287.040 ₫.</span>
+          <span className="text-xs text-slate-400">Ví dụ: Gói 12 Tháng giá {formatVND(1399000)} — voucher giảm 10% sẽ trừ thêm {formatVND(139900)}.</span>
         </div>
       </form>
     </div>

@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { prisma, getSettings } from "@/lib/db";
-import { minPriceFor } from "@/lib/utils";
 import TemplateCard from "@/components/TemplateCard";
-import PricingSection from "@/components/PricingSection";
 import VoucherCard from "@/components/VoucherCard";
 import NewsCard from "@/components/NewsCard";
 import {
@@ -13,8 +11,8 @@ export const dynamic = "force-dynamic";
 
 const steps = [
   {
-    title: "Chọn mẫu & gói thuê",
-    desc: "Xem demo sống của từng mẫu ngay trong trang chi tiết, chọn gói theo nhu cầu và thời hạn 1–24 tháng — thuê càng dài giảm càng nhiều.",
+    title: "Chọn mẫu & gói thời gian",
+    desc: "Xem demo sống của từng mẫu ngay trong trang chi tiết, rồi chọn một gói thời gian trọn gói (1–24 tháng) — giá rõ ràng, trả một lần.",
   },
   {
     title: "Nhập tên miền của bạn",
@@ -34,16 +32,14 @@ const reasons = [
   { icon: <BoltIcon />, title: "Có web trong vài phút", desc: "Toàn bộ khâu dựng web tự động: chọn mẫu, thanh toán xong là web chạy — không chờ đợi, không cần đội kỹ thuật." },
   { icon: <GlobeIcon />, title: "Tên miền & dữ liệu là của bạn", desc: "Tên miền nằm trong tài khoản Cloudflare của bạn. Nội dung website xuất được toàn bộ bất cứ lúc nào." },
   { icon: <ServerIcon />, title: "Không lo server & bảo mật", desc: "Hạ tầng, SSL, sao lưu, cập nhật bảo mật do nền tảng vận hành. Bạn chỉ tập trung bán hàng và làm nội dung." },
-  { icon: <ClockIcon />, title: "Thuê linh hoạt theo tháng", desc: "Từ 1 tới 24 tháng, chiết khấu tới 30% khi thuê dài hạn. Hết hạn có ân hạn và giữ dữ liệu thêm 30 ngày." },
+  { icon: <ClockIcon />, title: "Gói thời gian linh hoạt", desc: "Chọn gói 1, 3, 6, 12 hay 24 tháng — giá trọn gói rõ ràng, thuê càng dài càng rẻ. Hết hạn có ân hạn và giữ dữ liệu thêm 30 ngày." },
 ];
 
 export default async function HomePage() {
   const now = new Date();
-  const [settings, templates, plans, durations, faqs, allVouchers, news, orderGroups, siteCount] = await Promise.all([
+  const [settings, templates, faqs, allVouchers, news, orderGroups, siteCount] = await Promise.all([
     getSettings(),
     prisma.template.findMany({ where: { status: "PUBLISHED" }, orderBy: [{ sort: "asc" }, { createdAt: "desc" }] }),
-    prisma.plan.findMany({ orderBy: { sort: "asc" } }),
-    prisma.durationOption.findMany({ orderBy: { sort: "asc" } }),
     prisma.faq.findMany({ where: { active: true }, orderBy: { sort: "asc" } }),
     prisma.voucher.findMany({ where: { active: true }, orderBy: { createdAt: "desc" } }),
     prisma.newsPost.findMany({ where: { published: true }, orderBy: [{ sort: "asc" }, { createdAt: "desc" }], take: 3 }),
@@ -55,7 +51,6 @@ export default async function HomePage() {
     .filter((v) => (!v.startsAt || v.startsAt <= now) && (!v.expiresAt || v.expiresAt >= now) && (v.usageLimit === 0 || v.usedCount < v.usageLimit))
     .slice(0, 3);
   const categories = Array.from(new Set(templates.map((t) => t.category)));
-  const maxDiscount = Math.max(0, ...durations.filter((d) => d.active).map((d) => d.discountPercent));
   const heroShots = templates.filter((t) => t.coverImage).slice(0, 3);
   const featured = templates.slice(0, 6);
 
@@ -87,7 +82,7 @@ export default async function HomePage() {
             <dl className="mt-9 grid max-w-md grid-cols-3 gap-4 border-t border-white/10 pt-6">
               <div><dt className="text-2xl font-black">{templates.length}</dt><dd className="text-xs text-slate-400">Mẫu website</dd></div>
               <div><dt className="text-2xl font-black">{siteCount}</dt><dd className="text-xs text-slate-400">Website đã tạo</dd></div>
-              <div><dt className="text-2xl font-black">−{maxDiscount}%</dt><dd className="text-xs text-slate-400">Thuê dài hạn tối đa</dd></div>
+              <div><dt className="text-2xl font-black">{settings.trialDays} ngày</dt><dd className="text-xs text-slate-400">Dùng thử tên miền tạm</dd></div>
             </dl>
           </div>
           <div className="relative hidden lg:block">
@@ -137,7 +132,7 @@ export default async function HomePage() {
         </div>
         <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {featured.map((t) => (
-            <TemplateCard key={t.id} t={t} minPrice={minPriceFor(t.minPlanTier, plans)} rentCount={rentCount.get(t.id) ?? 0} />
+            <TemplateCard key={t.id} t={t} showPrice={false} rentCount={rentCount.get(t.id) ?? 0} />
           ))}
         </div>
         {templates.length === 0 && <p className="mt-6 text-slate-500">Chưa có mẫu nào được đăng. Vào Admin &gt; Mẫu website để đăng mẫu đầu tiên.</p>}
@@ -189,17 +184,6 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ============ BANG GIA ============ */}
-      <section className="mx-auto max-w-7xl px-4 py-14">
-        <div className="max-w-2xl">
-          <h2 className="text-3xl font-black text-slate-900">Gói thuê minh bạch</h2>
-          <p className="mt-1 text-slate-500">Giá, giới hạn và chiết khấu theo thời hạn — tất cả cấu hình trong trang quản trị, không phụ phí ẩn.</p>
-        </div>
-        <div className="mt-7">
-          <PricingSection plans={plans} durations={durations} />
         </div>
       </section>
 

@@ -11,7 +11,7 @@ export default async function PortalSitePage({ params }: { params: { id: string 
   const user = await requireUser();
   const site = await prisma.site.findUnique({
     where: { id: params.id },
-    include: { template: true, plan: true, order: true },
+    include: { template: true, plan: true, timePackage: true, order: true },
   });
   if (!site || site.userId !== user.id) notFound();
   const s = await getSettings();
@@ -30,7 +30,7 @@ export default async function PortalSitePage({ params }: { params: { id: string 
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold">{site.name}</h1>
-            <p className="text-sm text-slate-500">Mẫu {site.template.name} · Gói {site.plan.name} · Đơn {site.order.code}</p>
+            <p className="text-sm text-slate-500">Mẫu {site.template.name} · Gói {site.timePackage?.name ?? site.plan?.name ?? "—"} · Đơn {site.order.code}</p>
           </div>
           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${st.color}`}>{st.label}</span>
         </div>

@@ -9,7 +9,8 @@ export default async function AdminTemplateEdit({ params }: { params: { id: stri
   const isNew = params.id === "moi";
   const t = isNew ? null : await prisma.template.findUnique({ where: { id: params.id } });
   if (!isNew && !t) notFound();
-  const plans = await prisma.plan.findMany({ orderBy: { tier: "asc" } });
+  const pkgs = await prisma.timePackage.findMany({ orderBy: { tier: "asc" } });
+  const tiers = Array.from(new Map(pkgs.map((p) => [p.tier, p.name])).entries());
   return (
     <div>
       <Link href="/admin/mau" className="text-sm text-brand-700 hover:underline">← Danh sách mẫu</Link>
@@ -24,10 +25,10 @@ export default async function AdminTemplateEdit({ params }: { params: { id: stri
           <div><label className="label">Ảnh bìa (URL)</label><input name="coverImage" defaultValue={t?.coverImage ?? ""} className="input" /></div>
           <div><label className="label">Link demo sống (URL)</label><input name="demoUrl" defaultValue={t?.demoUrl ?? ""} className="input" /></div>
           <div>
-            <label className="label">Gói tối thiểu được dùng mẫu</label>
+            <label className="label">Tier gói thời gian tối thiểu được dùng mẫu</label>
             <select name="minPlanTier" defaultValue={t?.minPlanTier ?? 1} className="input">
-              {plans.map((p) => <option key={p.id} value={p.tier}>{p.name} (tier {p.tier})</option>)}
-              {plans.length === 0 && <option value={1}>Tier 1</option>}
+              {tiers.map(([tier, name]) => <option key={tier} value={tier}>Tier {tier} (từ {name})</option>)}
+              {tiers.length === 0 && <option value={1}>Tier 1</option>}
             </select>
           </div>
           <div>

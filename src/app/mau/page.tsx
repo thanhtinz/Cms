@@ -1,13 +1,13 @@
 import { prisma } from "@/lib/db";
-import { minPriceFor } from "@/lib/utils";
+import { cheapestPackageFor } from "@/lib/utils";
 import TemplateCard from "@/components/TemplateCard";
 
 export const dynamic = "force-dynamic";
 
 export default async function TemplatesPage({ searchParams }: { searchParams: { nganh?: string; q?: string } }) {
-  const [all, plans, orderGroups] = await Promise.all([
+  const [all, packages, orderGroups] = await Promise.all([
     prisma.template.findMany({ where: { status: "PUBLISHED" }, orderBy: [{ sort: "asc" }, { createdAt: "desc" }] }),
-    prisma.plan.findMany({ orderBy: { sort: "asc" } }),
+    prisma.timePackage.findMany({ where: { active: true }, orderBy: { sort: "asc" } }),
     prisma.rentalOrder.groupBy({ by: ["templateId"], where: { status: { not: "DA_HUY" } }, _count: true }),
   ]);
   const rentCount = new Map(orderGroups.map((g) => [g.templateId, g._count]));
@@ -46,7 +46,7 @@ export default async function TemplatesPage({ searchParams }: { searchParams: { 
         <p className="text-sm text-slate-500">Hiển thị {list.length} mẫu{searchParams.nganh ? ` thuộc ngành ${searchParams.nganh}` : ""}{searchParams.q ? ` khớp “${searchParams.q}”` : ""}</p>
         <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((t) => (
-            <TemplateCard key={t.id} t={t} minPrice={minPriceFor(t.minPlanTier, plans)} rentCount={rentCount.get(t.id) ?? 0} />
+            <TemplateCard key={t.id} t={t} fromPkg={cheapestPackageFor(t.minPlanTier, packages)} rentCount={rentCount.get(t.id) ?? 0} />
           ))}
         </div>
         {list.length === 0 && (

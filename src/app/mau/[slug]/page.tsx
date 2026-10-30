@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { splitLines, formatVND, minPriceFor } from "@/lib/utils";
+import { splitLines, formatVND, cheapestPackageFor } from "@/lib/utils";
 import RentForm from "@/components/RentForm";
 import TemplateCard from "@/components/TemplateCard";
 import { CheckIcon, PlayIcon, BoltIcon, ShieldIcon, GlobeIcon } from "@/components/icons";
@@ -17,9 +17,8 @@ export default async function TemplateDetail({
   const t = await prisma.template.findUnique({ where: { slug: params.slug } });
   if (!t || t.status !== "PUBLISHED") notFound();
 
-  const [plans, durations, rentCount, related] = await Promise.all([
-    prisma.plan.findMany({ orderBy: { sort: "asc" } }),
-    prisma.durationOption.findMany({ orderBy: { sort: "asc" } }),
+  const [packages, rentCount, related] = await Promise.all([
+    prisma.timePackage.findMany({ where: { active: true }, orderBy: { sort: "asc" } }),
     prisma.rentalOrder.count({ where: { templateId: t.id, status: { not: "DA_HUY" } } }),
     prisma.template.findMany({
       where: { status: "PUBLISHED", category: t.category, id: { not: t.id } },
@@ -27,8 +26,7 @@ export default async function TemplateDetail({
       take: 3,
     }),
   ]);
-  const minPlan = plans.find((p) => p.tier === t.minPlanTier);
-  const minPrice = minPriceFor(t.minPlanTier, plans);
+  const fromPkg = cheapestPackageFor(t.minPlanTier, packages);
   const gallery = [t.coverImage, ...splitLines(t.gallery)].filter(Boolean) as string[];
   const features = splitLines(t.features);
 
@@ -106,14 +104,13 @@ export default async function TemplateDetail({
           <h1 className="mt-3 text-3xl font-black leading-tight text-slate-900">{t.name}</h1>
 
           <div className="card mt-5 p-5">
-            <div className="text-xs uppercase tracking-wide text-slate-400">Giá thuê chỉ từ</div>
+            <div className="text-xs uppercase tracking-wide text-slate-400">Giá thuê trọn gói chỉ từ</div>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-3xl font-black text-brand-700">{minPrice ? formatVND(minPrice) : "—"}</span>
-              <span className="text-sm text-slate-500">/tháng</span>
+              <span className="text-3xl font-black text-brand-700">{fromPkg ? formatVND(fromPkg.price) : "—"}</span>
+              {fromPkg && <span className="text-sm text-slate-500">/ {fromPkg.months} tháng</span>}
             </div>
             <p className="mt-1.5 text-sm text-slate-500">
-              {minPlan ? <>Áp dụng từ gói <b className="text-slate-700">{minPlan.name}</b> trở lên. </> : null}
-              Thuê 12 tháng giảm tới 20%, 24 tháng giảm tới 30% (theo cấu hình thời hạn).
+              Giá theo gói thời gian — trả một lần cho cả kỳ thuê, thuê càng dài giá quy đổi mỗi tháng càng rẻ. Chọn gói ngay trong form thuê bên dưới.
             </p>
             <div className="mt-4 flex gap-2">
               <a href="#thue-ngay" className="btn-primary flex-1 py-3 text-base shadow-lg shadow-brand-600/20">Thuê mẫu này ngay</a>
@@ -138,7 +135,7 @@ export default async function TemplateDetail({
             <p className="mt-1 text-slate-500">Chọn gói, nhập tên miền, thanh toán — hệ thống tự tạo website cho bạn.</p>
           </div>
         </div>
-        <RentForm template={t} plans={plans} durations={durations} initPlan={searchParams.goi} error={searchParams.loi} />
+        <RentForm template={t} packages={packages} initPackage={searchParams.goi} error={searchParams.loi} />
       </section>
 
       {related.length > 0 && (
@@ -146,7 +143,7 @@ export default async function TemplateDetail({
           <h2 className="text-2xl font-black text-slate-900">Mẫu cùng ngành {t.category}</h2>
           <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {related.map((r) => (
-              <TemplateCard key={r.id} t={r} minPrice={minPriceFor(r.minPlanTier, plans)} />
+              <TemplateCard key={r.id} t={r} fromPkg={cheapestPackageFor(r.minPlanTier, packages)} />
             ))}
           </div>
         </section>

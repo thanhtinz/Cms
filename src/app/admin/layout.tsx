@@ -4,8 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 const menu = [
   { href: "/admin", label: "Tổng quan" },
   { href: "/admin/mau", label: "Mẫu website" },
-  { href: "/admin/goi", label: "Gói thuê" },
-  { href: "/admin/thoi-han", label: "Thời hạn & chiết khấu" },
+  { href: "/admin/goi-thoi-gian", label: "Gói thời gian" },
   { href: "/admin/don-thue", label: "Đơn thuê" },
   { href: "/admin/website", label: "Website khách" },
   { href: "/admin/khach-hang", label: "Khách hàng" },

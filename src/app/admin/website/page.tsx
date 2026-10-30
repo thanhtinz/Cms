@@ -5,7 +5,7 @@ import { setSiteStatusAction, activateSiteAction } from "@/lib/actions";
 export const dynamic = "force-dynamic";
 
 export default async function AdminSites() {
-  const sites = await prisma.site.findMany({ orderBy: { createdAt: "desc" }, include: { user: true, template: true, plan: true } });
+  const sites = await prisma.site.findMany({ orderBy: { createdAt: "desc" }, include: { user: true, template: true, plan: true, timePackage: true } });
   return (
     <div>
       <h1 className="text-2xl font-bold">Website khách</h1>
@@ -18,7 +18,7 @@ export default async function AdminSites() {
               <tr key={s.id} className="border-b last:border-0">
                 <td className="td font-medium">{s.name}<div className="text-xs text-slate-400">{s.slug}</div></td>
                 <td className="td">{s.user.name}</td>
-                <td className="td">{s.template.name}<div className="text-xs text-slate-400">{s.plan.name}</div></td>
+                <td className="td">{s.template.name}<div className="text-xs text-slate-400">{s.timePackage?.name ?? s.plan?.name ?? "—"}</div></td>
                 <td className="td">{s.domain}</td>
                 <td className="td"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${(SITE_STATUS[s.status] ?? SITE_STATUS.HET_HAN).color}`}>{(SITE_STATUS[s.status] ?? SITE_STATUS.HET_HAN).label}</span></td>
                 <td className="td">{formatDate(s.expiresAt)}</td>

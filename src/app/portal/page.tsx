@@ -9,7 +9,7 @@ export default async function PortalPage() {
   const user = await requireUser();
   const [orders, sites, settings] = await Promise.all([
     prisma.rentalOrder.findMany({ where: { userId: user.id }, include: { template: true }, orderBy: { createdAt: "desc" } }),
-    prisma.site.findMany({ where: { userId: user.id }, include: { template: true, plan: true }, orderBy: { createdAt: "desc" } }),
+    prisma.site.findMany({ where: { userId: user.id }, include: { template: true, plan: true, timePackage: true }, orderBy: { createdAt: "desc" } }),
     getSettings(),
   ]);
   return (
@@ -32,7 +32,7 @@ export default async function PortalPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-bold text-lg">{s.name}</div>
-                  <div className="text-sm text-slate-500">Mẫu: {s.template.name} · Gói: {s.plan.name}</div>
+                  <div className="text-sm text-slate-500">Mẫu: {s.template.name} · Gói: {s.timePackage?.name ?? s.plan?.name ?? "—"}</div>
                 </div>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${st.color}`}>{st.label}</span>
               </div>
