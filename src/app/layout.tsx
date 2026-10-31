@@ -6,6 +6,7 @@ import "./globals.css";
 export const dynamic = "force-dynamic";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ChromeGate from "@/components/ChromeGate";
 import Toasts from "@/components/Toast";
 import { getSettings } from "@/lib/db";
 
@@ -18,8 +19,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // MOT header + MOT menu (AppMenu) + MOT footer cho TOAN BO he thong —
-  // trang chu, Dashboard va Quan tri khong con chrome rieng biet.
+  // /admin va /portal co shell rieng — ChromeGate (client, theo usePathname)
+  // an header/footer web chinh ke ca khi dieu huong mem tu trang chu sang.
   return (
     <html lang="vi">
       <head>
@@ -35,9 +36,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <Header />
+        <ChromeGate>
+          <Header />
+        </ChromeGate>
         <main className="min-h-[70vh]">{children}</main>
-        <Footer />
+        <ChromeGate>
+          <Footer />
+        </ChromeGate>
         <Suspense fallback={null}>
           <Toasts />
         </Suspense>
