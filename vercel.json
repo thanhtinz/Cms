@@ -1,1 +1,10 @@
-{"buildCommand":"npx prisma generate && DATABASE_URL=${DATABASE_URL_UNPOOLED:-$DATABASE_URL} npx prisma db push --skip-generate --accept-data-loss && DATABASE_URL=${DATABASE_URL_UNPOOLED:-$DATABASE_URL} npx prisma db seed && npm run build","framework":"nextjs"}
+{
+  "buildCommand": "npx prisma generate && DATABASE_URL=${DATABASE_URL_UNPOOLED:-$DATABASE_URL} npx prisma db push --skip-generate --accept-data-loss && DATABASE_URL=${DATABASE_URL_UNPOOLED:-$DATABASE_URL} npx prisma db seed && npm run build",
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/vong-doi",
+      "schedule": "15 1 * * *"
+    }
+  ]
+}

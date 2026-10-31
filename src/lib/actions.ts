@@ -686,6 +686,32 @@ export async function cancelOrderAction(formData: FormData) {
   redirect("/admin/don-thue");
 }
 
+// Ghi chu NOI BO cua admin tren tung don thue (khach khong bao gio thay)
+export async function saveOrderNoteAction(formData: FormData) {
+  await requireAdmin();
+  const orderId = String(formData.get("orderId") ?? "");
+  const adminNote = String(formData.get("adminNote") ?? "").trim();
+  const order = await prisma.rentalOrder.findUnique({ where: { id: orderId }, select: { code: true } });
+  if (!order) redirect("/admin/don-thue");
+  await prisma.rentalOrder.update({ where: { id: orderId }, data: { adminNote: adminNote || null } });
+  await logActivity("ORDER_NOTE", `Cập nhật ghi chú nội bộ đơn ${order.code}`);
+  revalidatePath(`/admin/don-thue/${orderId}`);
+  redirect(`/admin/don-thue/${orderId}?ok=${encodeURIComponent("Đã lưu ghi chú nội bộ")}`);
+}
+
+// Chay quet vong doi thue bang tay: web qua han -> HET_HAN (cron tu dong goi cung logic nay)
+export async function runLifecycleAction() {
+  await requireAdmin();
+  const { runLifecycleSweep } = await import("./lifecycle");
+  const { expiredCount } = await runLifecycleSweep();
+  if (expiredCount > 0) {
+    await logActivity("LIFECYCLE", `Chạy tay kiểm tra vòng đời: ${expiredCount} website quá hạn đã chuyển sang Hết hạn`);
+  }
+  revalidatePath("/admin");
+  revalidatePath("/admin/website");
+  redirect(`/admin?ok=${encodeURIComponent(expiredCount > 0 ? `Đã chuyển ${expiredCount} website quá hạn sang trạng thái Hết hạn` : "Đã kiểm tra — không có website nào quá hạn")}`);
+}
+
 export async function activateSiteAction(formData: FormData) {
   await requireAdmin();
   const siteId = String(formData.get("siteId") ?? "");

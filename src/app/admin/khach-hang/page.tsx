@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { formatDate, formatVND } from "@/lib/utils";
 import { parseListParams, pageInfo, filterQuery } from "@/lib/admin-list";
@@ -43,7 +44,7 @@ export default async function AdminCustomers({ searchParams }: { searchParams: R
           <tbody>
             {users.map((u) => (
               <tr key={u.id} className="border-b last:border-0">
-                <td className="td font-medium">{u.name}</td>
+                <td className="td font-medium"><Link href={`/admin/khach-hang/${u.id}`} className="text-brand-700 hover:underline">{u.name}</Link></td>
                 <td className="td">{u.email}{u.phone ? <div className="text-xs text-slate-400">{u.phone}</div> : null}</td>
                 <td className="td font-semibold text-slate-800">{formatVND(spentMap.get(u.id) ?? 0)}</td>
                 <td className="td">{u._count.orders}</td>

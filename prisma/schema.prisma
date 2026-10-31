@@ -146,6 +146,7 @@ model RentalOrder {
   domain          String
   status          String    @default("CHO_THANH_TOAN") // CHO_THANH_TOAN | DA_THANH_TOAN | DA_HUY
   note            String?
+  adminNote       String? // ghi chu NOI BO cua admin (khach khong thay)
   site            Site?
   renewalSiteId   String? // neu la don GIA HAN: website duoc gia han
   renewalSite     Site?     @relation("RenewalOrders", fields: [renewalSiteId], references: [id])

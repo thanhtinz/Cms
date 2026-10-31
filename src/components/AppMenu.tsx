@@ -14,6 +14,7 @@ const PUBLIC_NAV = [
   { href: "/mau", label: "Kho mẫu website", icon: "fa-layer-group" },
   { href: "/bang-gia", label: "Bảng giá", icon: "fa-tags" },
   { href: "/tin-tuc", label: "Tin tức", icon: "fa-newspaper" },
+  { href: "/kiem-tra-key", label: "Kiểm tra key kích hoạt", icon: "fa-key" },
   { href: "/#cach-hoat-dong", label: "Cách hoạt động", icon: "fa-diagram-project" },
   { href: "/#faq", label: "Hỏi đáp", icon: "fa-circle-question" },
 ];

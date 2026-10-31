@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { formatVND, formatDate, SITE_STATUS, TICKET_STATUS } from "@/lib/utils";
 import { getCapacity } from "@/lib/quota";
+import { runLifecycleAction } from "@/lib/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -291,7 +292,14 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
       <div className="card mt-6 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-bold text-slate-900"><i className="fa-solid fa-server mr-2 text-brand-600" aria-hidden /> Dung lượng hệ thống (VPS)</h2>
-          <Link href="/admin/cai-dat" className="text-sm font-semibold text-brand-700 hover:underline">Cấu hình sức chứa →</Link>
+          <span className="flex flex-wrap items-center gap-3">
+            <form action={runLifecycleAction}>
+              <button className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50" title="Quét ngay: website nào đã quá ngày hết hạn sẽ tự chuyển sang trạng thái Hết hạn (cron cũng tự chạy mỗi ngày)">
+                <i className="fa-solid fa-rotate mr-1.5 text-brand-600" aria-hidden /> Kiểm tra vòng đời thuê
+              </button>
+            </form>
+            <Link href="/admin/cai-dat" className="text-sm font-semibold text-brand-700 hover:underline">Cấu hình sức chứa →</Link>
+          </span>
         </div>
         <p className="mt-1 text-sm text-slate-500">
           Đã tự động cấp cho {capacity.siteCount} website · Sức chứa khai báo {capacity.capacityDiskGb} GB đĩa / {capacity.capacityBandwidthGb.toLocaleString("vi-VN")} GB băng thông · Hệ số bán vượt ×{capacity.oversellRatio}

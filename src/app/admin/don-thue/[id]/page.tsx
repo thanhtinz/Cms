@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma, getSettings } from "@/lib/db";
 import { formatVND, formatDate, ORDER_STATUS, SITE_STATUS } from "@/lib/utils";
-import { confirmPaymentAction, cancelOrderAction, activateSiteAction, setSiteStatusAction } from "@/lib/actions";
+import { confirmPaymentAction, cancelOrderAction, activateSiteAction, setSiteStatusAction, saveOrderNoteAction } from "@/lib/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +34,17 @@ export default async function AdminOrderDetail({ params, searchParams }: { param
         <div><span className="text-slate-500">Tên miền khách:</span> <b>{order.domain}</b></div>
         <div><span className="text-slate-500">Tổng tiền:</span> <b className="text-brand-700">{formatVND(order.total)}</b></div>
         <div><span className="text-slate-500">Ngày đặt:</span> <b>{formatDate(order.createdAt)}</b></div>
+        {order.note && <div className="sm:col-span-2"><span className="text-slate-500">Ghi chú của khách:</span> <b>{order.note}</b></div>}
+      </div>
+
+      <div className="card mt-5 p-6">
+        <h2 className="font-bold"><i className="fa-solid fa-note-sticky mr-2 text-amber-500" aria-hidden /> Ghi chú nội bộ</h2>
+        <p className="mt-1 text-xs text-slate-400">Chỉ đội quản trị thấy — khách hàng không bao giờ thấy ghi chú này. Dùng để lưu ý đối soát, thỏa thuận riêng, lịch sử xử lý đơn...</p>
+        <form action={saveOrderNoteAction} className="mt-3">
+          <input type="hidden" name="orderId" value={order.id} />
+          <textarea name="adminNote" rows={3} defaultValue={order.adminNote ?? ""} placeholder="Ví dụ: Khách chuyển khoản từ tài khoản khác, đã gọi điện xác nhận lúc 9h..." className="input w-full" />
+          <button className="btn-primary mt-3">Lưu ghi chú</button>
+        </form>
       </div>
 
       {order.status === "CHO_THANH_TOAN" && (

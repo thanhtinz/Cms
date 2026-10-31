@@ -14,6 +14,8 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   TEMPLATE: "Mẫu website",
   TIME_PACKAGE: "Gói thời gian",
   TICKET_STATUS: "Trạng thái ticket",
+  ORDER_NOTE: "Ghi chú nội bộ đơn",
+  LIFECYCLE: "Vòng đời thuê tự động",
 };
 
 // Ghi 1 dòng nhật ký cho thao tác admin vừa thực hiện. Best-effort:
