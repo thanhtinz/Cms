@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { headers } from "next/headers";
 import "./globals.css";
 
 // Toan bo nen tang doc du lieu dong (cai dat, nguoi dung) — khong prerender tinh.
 export const dynamic = "force-dynamic";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ChromeGate from "@/components/ChromeGate";
 import Toasts from "@/components/Toast";
 import { getSettings } from "@/lib/db";
 
@@ -19,9 +19,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // /admin va /portal co shell rieng (header/footer/menu cua chinh no)
-  const pathname = headers().get("x-pathname") ?? "";
-  const isAppShell = pathname.startsWith("/admin") || pathname.startsWith("/portal");
+  // /admin va /portal co shell rieng — ChromeGate (client, theo usePathname)
+  // an header/footer web chinh ke ca khi dieu huong mem tu trang chu sang.
   return (
     <html lang="vi">
       <head>
@@ -37,15 +36,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        {isAppShell ? (
-          children
-        ) : (
-          <>
-            <Header />
-            <main className="min-h-[70vh]">{children}</main>
-            <Footer />
-          </>
-        )}
+        <ChromeGate>
+          <Header />
+        </ChromeGate>
+        <main className="min-h-[70vh]">{children}</main>
+        <ChromeGate>
+          <Footer />
+        </ChromeGate>
         <Suspense fallback={null}>
           <Toasts />
         </Suspense>
