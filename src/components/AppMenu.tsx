@@ -49,9 +49,9 @@ function itemActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-// === MENU BURGER DUY NHAT cua toan he thong ===
-// Dung chung o header web chinh, Dashboard khach va trang Quan tri:
-// cung 1 nut bam, cung 1 drawer truot tu trai, cung noi dung theo quyen.
+// === MENU BURGER cua TRANG CHU + DASHBOARD KHACH ===
+// Hai khu nay CHUNG mot nha: cung header web chinh, cung menu nay.
+// Rieng khu Quan tri (/admin) co shell va menu burger RIENG (AdminMenu).
 export default function AppMenu({
   brandName, user, badges,
 }: {

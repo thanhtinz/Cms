@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import SupportChat from "./SupportChat";
-import AppMenu, { type AppMenuBadges } from "./AppMenu";
+import AdminMenu from "./AdminMenu";
+import type { AppMenuBadges } from "./AppMenu";
 
 export type ShellMenuItem = { href: string; label: string; icon: string; badge?: number };
 export type ShellUser = { name: string; email: string; role: string };
@@ -13,9 +14,10 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/");
 }
 
-// Khung dung chung cho Dashboard khach va trang Quan tri:
-// header + sidebar desktop + footer rieng. Menu burger la AppMenu —
-// CUNG MOT menu voi header web chinh (khong con drawer rieng khac kieu).
+// Shell RIENG cua khu Quan tri (/admin): header + sidebar desktop + footer
+// rieng, va menu burger la AdminMenu — menu RIENG chi chua muc quan tri,
+// khong lan Dashboard khach hay trang chu. (Dashboard khach /portal khong
+// dung shell nay — no hoa vao trang chu, dung AppMenu o header web chinh.)
 export default function ShellFrame({
   brand, brandSub, user, menu, footerText, sideExtra, badges, children,
 }: {
@@ -67,10 +69,10 @@ export default function ShellFrame({
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-100">
-      {/* ===== Header cua khu vuc (menu burger dung AppMenu nhu trang chu) ===== */}
+      {/* ===== Header rieng cua khu Quan tri (menu burger AdminMenu rieng) ===== */}
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
-          <AppMenu brandName={brand} user={user} badges={badges} />
+          <AdminMenu brandName={brand} user={user} badges={badges} />
           <Link href={menu[0]?.href ?? "/"} className="flex min-w-0 items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-md shadow-brand-600/30">
               <i className="fa-solid fa-globe" aria-hidden />
