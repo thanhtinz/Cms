@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutAction } from "@/lib/actions";
@@ -106,7 +107,9 @@ export default function AppMenu({
         <i className="fa-solid fa-bars text-lg" aria-hidden />
       </button>
 
-      {open && (
+      {/* Portal ra document.body: header co backdrop-blur se "nhot" position:fixed
+          ben trong khung header (loi drawer vo nua chung) — portal thoat ra ngoai. */}
+      {open && createPortal(
         <div className="fixed inset-0 z-[60]">
           <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-[1px]" onClick={() => setOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-[330px] max-w-[88vw] flex-col bg-white shadow-2xl">
@@ -172,7 +175,8 @@ export default function AppMenu({
               </form>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

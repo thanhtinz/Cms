@@ -23,9 +23,6 @@ export default function HeaderBar({
 }) {
   const pathname = usePathname() ?? "";
 
-  // Phong thu: khong bao gio xuat hien trong khu vuc Dashboard/Quan tri
-  if (pathname.startsWith("/admin") || pathname.startsWith("/portal")) return null;
-
   const initial = (user?.name || "?").trim().charAt(0).toUpperCase();
   const isActive = (href: string) => (href.startsWith("/#") ? false : pathname === href || pathname.startsWith(href + "/"));
 
