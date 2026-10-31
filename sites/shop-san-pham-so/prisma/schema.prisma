@@ -1,0 +1,673 @@
+// Digital Store — Prisma schema
+// PostgreSQL. Prices are stored as Decimal(10,2) in the store currency (USD by default).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Users & Auth ───────────────────────────
+
+enum Role {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+model User {
+  id               Int       @id @default(autoincrement())
+  email            String    @unique @db.VarChar(255)
+  name             String    @db.VarChar(120)
+  passwordHash     String?   @map("password_hash")
+  role             Role      @default(CUSTOMER)
+  avatarUrl        String?   @map("avatar_url")
+  emailVerifiedAt  DateTime? @map("email_verified_at")
+  googleId         String?   @unique @map("google_id") @db.VarChar(64)
+  twoFactorSecret  String?   @map("two_factor_secret") @db.VarChar(64)
+  twoFactorEnabled Boolean   @default(false) @map("two_factor_enabled")
+  isBlocked        Boolean   @default(false) @map("is_blocked")
+  // Incremented on password change/reset and 2FA changes — instantly
+  // invalidates every existing session token for the account.
+  sessionVersion   Int       @default(0) @map("session_version")
+  balance          Decimal   @default(0) @db.Decimal(10, 2)
+  loyaltyPoints    Int       @default(0) @map("loyalty_points")
+  refCode          String?   @unique @map("ref_code") @db.VarChar(20)
+  referredById     Int?      @map("referred_by_id")
+  // Telegram bot link: chat id once connected, one-time code while linking.
+  telegramChatId   String?   @unique @map("telegram_chat_id") @db.VarChar(32)
+  telegramLinkCode String?   @unique @map("telegram_link_code") @db.VarChar(40)
+  // Where account notifications go: email | telegram | both
+  notifyChannel    String    @default("email") @map("notify_channel") @db.VarChar(10)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  tokens       AuthToken[]
+  logins       LoginHistory[]
+  cartItems    CartItem[]
+  orders       Order[]
+  reviews      Review[]
+  couponUses   CouponRedemption[]
+  wishlist     WishlistItem[]
+  tickets      SupportTicket[]
+  walletTxns   WalletTransaction[]
+  topups       Topup[]
+  apiKeys      ApiKey[]
+  paymentIntents PaymentIntent[]
+
+  @@map("users")
+}
+
+enum TokenType {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+model AuthToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  type      TokenType
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("auth_tokens")
+}
+
+model LoginHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  ip        String?  @db.VarChar(64)
+  userAgent String?  @map("user_agent") @db.VarChar(400)
+  method    String   @default("password") @db.VarChar(20) // password | google | 2fa
+  success   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("login_history")
+}
+
+// ─────────────────────────── Catalog ───────────────────────────
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(120)
+  slug        String   @unique @db.VarChar(140)
+  description String?
+  imageUrl    String?  @map("image_url")
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id           Int      @id @default(autoincrement())
+  categoryId   Int?     @map("category_id")
+  name         String   @db.VarChar(200)
+  slug         String   @unique @db.VarChar(220)
+  shortDesc    String?  @map("short_desc") @db.VarChar(500)
+  description  String?  // rich HTML — "About this product"
+  guide        String?  // rich HTML — "How to use / activation guide"
+  isActive     Boolean  @default(true) @map("is_active")
+  isFeatured   Boolean  @default(false) @map("is_featured")
+  // Per-product affiliate commission % — null falls back to the global rate.
+  affiliateRate Decimal? @map("affiliate_rate") @db.Decimal(5, 2)
+  soldCount    Int      @default(0) @map("sold_count")
+  ratingAvg    Float    @default(0) @map("rating_avg")
+  ratingCount  Int      @default(0) @map("rating_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  category Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  images   ProductImage[]
+  packages Package[]
+  reviews  Review[]
+  wishlist WishlistItem[]
+
+  @@index([categoryId, isActive])
+  @@map("products")
+}
+
+model ProductImage {
+  id        Int    @id @default(autoincrement())
+  productId Int    @map("product_id")
+  url       String
+  sortOrder Int    @default(0) @map("sort_order")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+// A purchasable variant/tier of a product ("1 month", "Family plan", ...).
+// `customFields` defines inputs the customer must fill when buying
+// (e.g. account email to upgrade, game ID, region) as a JSON array of
+// { key, label, type: "text"|"email"|"number", required, placeholder, help }.
+model Package {
+  id           Int      @id @default(autoincrement())
+  productId    Int      @map("product_id")
+  name         String   @db.VarChar(160)
+  description  String?  @db.VarChar(500)
+  price        Decimal  @db.Decimal(10, 2)
+  comparePrice Decimal? @map("compare_price") @db.Decimal(10, 2) // strike-through price
+  customFields Json?    @map("custom_fields")
+  autoDeliver  Boolean  @default(false) @map("auto_deliver") // deliver from StockItem pool on payment
+  // Manual availability switch for manually-fulfilled packages. Automatic
+  // packages derive availability from their stock pool instead.
+  inStock      Boolean  @default(true) @map("in_stock")
+  // Text automatically appended below the delivered codes (activation steps,
+  // warranty info…). Only used when autoDeliver is on.
+  deliveryNote String?  @map("delivery_note")
+  // Email the store owner when unsold stock drops to/below this number.
+  lowStockAlert Int?    @map("low_stock_alert")
+  sortOrder    Int      @default(0) @map("sort_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockItems     StockItem[]
+  stockAlerts    StockAlert[]
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  flashSaleItems FlashSaleItem[]
+
+  @@index([productId, isActive])
+  @@map("packages")
+}
+
+// Pre-loaded digital goods (license keys, account credentials) for auto delivery.
+model StockItem {
+  id          Int       @id @default(autoincrement())
+  packageId   Int       @map("package_id")
+  content     String    // the secret delivered to the buyer
+  isSold      Boolean   @default(false) @map("is_sold")
+  orderItemId Int?      @map("order_item_id")
+  soldAt      DateTime? @map("sold_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@index([packageId, isSold])
+  @@map("stock_items")
+}
+
+model Banner {
+  id        Int      @id @default(autoincrement())
+  title     String?  @db.VarChar(160)
+  subtitle  String?  @db.VarChar(300)
+  imageUrl  String   @map("image_url")
+  linkUrl   String?  @map("link_url")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("banners")
+}
+
+model WishlistItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  productId Int      @map("product_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
+}
+
+// ─────────────────────────── Promotions ───────────────────────────
+
+enum CouponType {
+  PERCENT
+  FIXED
+}
+
+model Coupon {
+  id           Int        @id @default(autoincrement())
+  code         String     @unique @db.VarChar(60)
+  type         CouponType @default(PERCENT)
+  value        Decimal    @db.Decimal(10, 2) // percent (0-100) or fixed amount
+  minOrder     Decimal?   @map("min_order") @db.Decimal(10, 2)
+  maxDiscount  Decimal?   @map("max_discount") @db.Decimal(10, 2) // cap for PERCENT type
+  maxUses      Int?       @map("max_uses")
+  usedCount    Int        @default(0) @map("used_count")
+  perUserLimit Int?       @map("per_user_limit")
+  startsAt     DateTime?  @map("starts_at")
+  endsAt       DateTime?  @map("ends_at")
+  isActive     Boolean    @default(true) @map("is_active")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  redemptions CouponRedemption[]
+
+  @@map("coupons")
+}
+
+model CouponRedemption {
+  id        Int      @id @default(autoincrement())
+  couponId  Int      @map("coupon_id")
+  userId    Int      @map("user_id")
+  orderId   Int      @map("order_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([couponId, userId])
+  @@map("coupon_redemptions")
+}
+
+model FlashSale {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(160)
+  startsAt  DateTime @map("starts_at")
+  endsAt    DateTime @map("ends_at")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  items FlashSaleItem[]
+
+  @@map("flash_sales")
+}
+
+model FlashSaleItem {
+  id            Int     @id @default(autoincrement())
+  flashSaleId   Int     @map("flash_sale_id")
+  packageId     Int     @map("package_id")
+  salePrice     Decimal @map("sale_price") @db.Decimal(10, 2)
+  quantityLimit Int?    @map("quantity_limit") // max units at sale price (null = unlimited)
+  soldCount     Int     @default(0) @map("sold_count")
+
+  flashSale FlashSale @relation(fields: [flashSaleId], references: [id], onDelete: Cascade)
+  package   Package   @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([flashSaleId, packageId])
+  @@map("flash_sale_items")
+}
+
+// ─────────────────────────── Cart & Orders ───────────────────────────
+
+model CartItem {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @map("user_id")
+  packageId        Int      @map("package_id")
+  quantity         Int      @default(1)
+  customFieldsData Json?    @map("custom_fields_data")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, packageId])
+  @@map("cart_items")
+}
+
+enum OrderStatus {
+  PENDING    // created, awaiting payment
+  PAID       // payment confirmed, delivery in progress
+  COMPLETED  // all items delivered
+  CANCELLED
+  REFUNDED
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  code          String      @unique @db.VarChar(20)
+  userId        Int         @map("user_id")
+  email         String      @db.VarChar(255)
+  subtotal      Decimal     @db.Decimal(10, 2)
+  discount      Decimal     @default(0) @db.Decimal(10, 2)
+  total         Decimal     @db.Decimal(10, 2)
+  currency      String      @default("USD") @db.VarChar(3)
+  couponCode    String?     @map("coupon_code") @db.VarChar(60)
+  status        OrderStatus @default(PENDING)
+  paymentMethod String?     @map("payment_method") @db.VarChar(20) // stripe | paypal
+  paymentRef    String?     @map("payment_ref") @db.VarChar(255)   // gateway session/order id
+  pointsUsed    Int         @default(0) @map("points_used")        // loyalty points redeemed on this order
+  paidAt        DateTime?   @map("paid_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at")
+
+  user        User               @relation(fields: [userId], references: [id])
+  items       OrderItem[]
+  couponUses  CouponRedemption[]
+
+  @@index([userId, createdAt])
+  @@index([paymentRef])
+  @@map("orders")
+}
+
+model OrderItem {
+  id               Int       @id @default(autoincrement())
+  orderId          Int       @map("order_id")
+  packageId        Int?      @map("package_id")
+  productName      String    @map("product_name") @db.VarChar(200)  // snapshot
+  packageName      String    @map("package_name") @db.VarChar(160)  // snapshot
+  imageUrl         String?   @map("image_url")                       // snapshot
+  quantity         Int       @default(1)
+  unitPrice        Decimal   @map("unit_price") @db.Decimal(10, 2)
+  lineTotal        Decimal   @map("line_total") @db.Decimal(10, 2)
+  customFieldsData Json?     @map("custom_fields_data")
+  // Flash-sale allocation this line consumed — released if the order is cancelled.
+  flashSaleItemId  Int?      @map("flash_sale_item_id")
+  deliveryData     String?   @map("delivery_data") // keys/credentials/notes delivered to buyer
+  deliveredAt      DateTime? @map("delivered_at")
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  package Package? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+// ─────────────────────────── Reviews ───────────────────────────
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  productId  Int      @map("product_id")
+  userId     Int      @map("user_id")
+  rating     Int      // 1..5
+  content    String?
+  adminReply String?  @map("admin_reply")
+  images     Json?    // array of media URLs attached by the reviewer (max 3)
+  isApproved Boolean  @default(true) @map("is_approved")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, userId])
+  @@index([productId, isApproved])
+  @@map("reviews")
+}
+
+// ─────────────────────────── Support ───────────────────────────
+
+enum TicketStatus {
+  OPEN      // waiting for staff
+  ANSWERED  // staff replied, waiting for customer
+  CLOSED
+}
+
+model SupportTicket {
+  id        Int          @id @default(autoincrement())
+  userId    Int          @map("user_id")
+  subject   String       @db.VarChar(200)
+  orderCode String?      @map("order_code") @db.VarChar(20)
+  status    TicketStatus @default(OPEN)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @default(now()) @updatedAt @map("updated_at")
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages TicketMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([status])
+  @@map("support_tickets")
+}
+
+model TicketMessage {
+  id          Int      @id @default(autoincrement())
+  ticketId    Int      @map("ticket_id")
+  isStaff     Boolean  @default(false) @map("is_staff")
+  content     String
+  attachments Json?    // array of image URLs (/api/media/…)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("ticket_messages")
+}
+
+// ─────────────────────────── Wallet & Rewards ───────────────────────────
+
+model WalletTransaction {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  type      String   @db.VarChar(20) // TOPUP | PURCHASE | COMMISSION | REFUND | ADJUST
+  amount    Decimal  @db.Decimal(10, 2) // signed: credits positive, debits negative
+  note      String?  @db.VarChar(300)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("wallet_transactions")
+}
+
+// ─────────────────── Payment attempts (SePay / PayOS / bank) ───────────────
+// One row per attempt to pay for something, whatever the something is. It
+// carries the amount twice: what the store books (base currency) and what the
+// gateway actually collects, with the exchange rate frozen at creation so a
+// later rate edit never changes an amount a customer was already quoted.
+enum PaymentIntentStatus {
+  PENDING         // waiting on the gateway, or on the customer's transfer
+  AWAITING_REVIEW // manual transfer: customer says they paid, admin must confirm
+  PAID
+  EXPIRED
+  CANCELLED
+  FAILED          // admin rejected, or the gateway reported failure
+}
+
+model PaymentIntent {
+  id       Int    @id @default(autoincrement())
+  // Public numeric reference: PayOS requires a numeric orderCode, and it
+  // doubles as the suffix of the bank-transfer memo. Int, not BigInt, so it
+  // serializes to JSON without special handling.
+  ref      Int    @unique
+  purpose  String @db.VarChar(10) // ORDER | TOPUP | GIFTCARD
+  targetId Int    @map("target_id")
+  userId   Int    @map("user_id")
+  method   String @db.VarChar(20) // sepay | payos | bank
+
+  baseAmount     Decimal @map("base_amount") @db.Decimal(12, 2)
+  baseCurrency   String  @map("base_currency") @db.VarChar(3)
+  chargeAmount   Decimal @map("charge_amount") @db.Decimal(16, 2)
+  chargeCurrency String  @map("charge_currency") @db.VarChar(3)
+  fxRate         Decimal @map("fx_rate") @db.Decimal(18, 8)
+
+  status PaymentIntentStatus @default(PENDING)
+  // Unique so one bank transaction or payment link can settle at most one
+  // intent, ever — the cross-intent replay guard.
+  gatewayRef String? @unique @map("gateway_ref") @db.VarChar(255)
+
+  memo         String?   @db.VarChar(40) // what we told the customer to type
+  proofUrl     String?   @map("proof_url")
+  payerNote    String?   @map("payer_note") @db.VarChar(300)
+  reviewedById Int?      @map("reviewed_by_id")
+  reviewedAt   DateTime? @map("reviewed_at")
+  reviewNote   String?   @map("review_note") @db.VarChar(300)
+
+  raw       Json?
+  expiresAt DateTime? @map("expires_at")
+  paidAt    DateTime? @map("paid_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([purpose, targetId])
+  @@index([status, createdAt])
+  @@map("payment_intents")
+}
+
+model Topup {
+  id         Int       @id @default(autoincrement())
+  code       String    @unique @db.VarChar(20)
+  userId     Int       @map("user_id")
+  amount     Decimal   @db.Decimal(10, 2)
+  method     String    @db.VarChar(20) // stripe | paypal
+  paymentRef String?   @map("payment_ref") @db.VarChar(255)
+  status     String    @default("PENDING") @db.VarChar(20) // PENDING | PAID | CANCELLED
+  createdAt  DateTime  @default(now()) @map("created_at")
+  paidAt     DateTime? @map("paid_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([paymentRef])
+  @@map("topups")
+}
+
+// Automatic coupon campaigns with configurable conditions. A background
+// job evaluates the rules and emails personal one-time codes.
+model AutoCouponRule {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(120)
+  trigger      String   @db.VarChar(30) // ABANDONED_CART | WINBACK
+  delayHours   Int      @default(24)    // abandoned cart: hours since items were added
+  inactiveDays Int      @default(30)    // winback: days since the last paid order
+  minCartValue Decimal? @map("min_cart_value") @db.Decimal(10, 2)  // abandoned cart condition
+  minSpentTotal Decimal? @map("min_spent_total") @db.Decimal(10, 2) // winback: lifetime spend condition
+  discountType String   @default("PERCENT") @map("discount_type") @db.VarChar(10)
+  value        Decimal  @db.Decimal(10, 2)
+  maxDiscount  Decimal? @map("max_discount") @db.Decimal(10, 2)
+  expiresDays  Int      @default(7)  @map("expires_days")   // coupon lifetime
+  cooldownDays Int      @default(30) @map("cooldown_days")  // min days between grants per user
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  grants AutoCouponGrant[]
+
+  @@map("auto_coupon_rules")
+}
+
+model AutoCouponGrant {
+  id         Int      @id @default(autoincrement())
+  ruleId     Int      @map("rule_id")
+  userId     Int      @map("user_id")
+  couponCode String   @map("coupon_code") @db.VarChar(60)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  rule AutoCouponRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId, userId, createdAt])
+  @@map("auto_coupon_grants")
+}
+
+// ─────────────────────────── Media & Settings ───────────────────────────
+
+model MediaFile {
+  id        Int      @id @default(autoincrement())
+  fileName  String   @map("file_name") @db.VarChar(255)
+  mimeType  String   @map("mime_type") @db.VarChar(100)
+  data      Bytes
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("media_files")
+}
+
+// Key/value store for site + integration settings, editable in the admin panel.
+// Secrets (API keys) live here too; env vars override at read time.
+model Setting {
+  key       String   @id @db.VarChar(80)
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+// ─────────────────────────── Operations ───────────────────────────
+
+// Immutable trail of admin actions (who changed what, when, from where).
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  userEmail String   @map("user_email") @db.VarChar(190)
+  action    String   @db.VarChar(80) // e.g. product.update, order.deliver
+  target    String?  @db.VarChar(190) // human-readable subject: "Order TYR8ZS", "StreamMax 4K"
+  detail    String? // extra context, plain text
+  ip        String?  @db.VarChar(64)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+// "Notify me when back in stock" subscriptions for auto-delivered packages.
+model StockAlert {
+  id         Int       @id @default(autoincrement())
+  packageId  Int       @map("package_id")
+  email      String    @db.VarChar(190)
+  userId     Int?      @map("user_id")
+  notifiedAt DateTime? @map("notified_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, email])
+  @@index([packageId, notifiedAt])
+  @@map("stock_alerts")
+}
+
+// ─────────────────────────── News ───────────────────────────
+
+model Post {
+  id          Int       @id @default(autoincrement())
+  title       String    @db.VarChar(200)
+  slug        String    @unique @db.VarChar(220)
+  excerpt     String?   @db.VarChar(500)
+  content     String // rich HTML body
+  coverImage  String?   @map("cover_image")
+  isPublished Boolean   @default(false) @map("is_published")
+  publishedAt DateTime? @map("published_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@index([isPublished, publishedAt])
+  @@map("posts")
+}
+
+// ─────────────────────────── Gift cards & API keys ───────────────────────────
+
+// Prepaid wallet-credit cards: bought via any payment method, redeemed by
+// anyone into their wallet balance.
+model GiftCard {
+  id           Int       @id @default(autoincrement())
+  code         String    @unique @db.VarChar(40)
+  amount       Decimal   @db.Decimal(10, 2)
+  status       String    @default("PENDING") @db.VarChar(10) // PENDING | ACTIVE | REDEEMED
+  buyerId      Int?      @map("buyer_id")
+  redeemedById Int?      @map("redeemed_by_id")
+  redeemedAt   DateTime? @map("redeemed_at")
+  method       String?   @db.VarChar(20)
+  paymentRef   String?   @map("payment_ref")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([buyerId])
+  @@map("gift_cards")
+}
+
+// Reseller API keys — orders placed through /api/v1 pay from the key
+// owner's wallet balance.
+model ApiKey {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  name       String    @db.VarChar(120)
+  prefix     String    @db.VarChar(16) // displayed identifier, e.g. dsk_ab12cd34
+  keyHash    String    @unique @map("key_hash") @db.VarChar(64)
+  isActive   Boolean   @default(true) @map("is_active")
+  lastUsedAt DateTime? @map("last_used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}

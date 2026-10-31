@@ -13,6 +13,6 @@ Mỗi thư mục con trong `sites/` là mã nguồn (src) của **một mẫu we
 | Thư mục | Mẫu tương ứng | Trạng thái |
 |---|---|---|
 | `_mau-chuan/` | Khung chuẩn để tạo mẫu mới | Khung tham chiếu |
-| _(sẽ bổ sung)_ | Shop bán hàng, doanh nghiệp, landing... | Khi bắt đầu làm src cho khách thuê |
+| `shop-san-pham-so/` | Shop Sản Phẩm Số — Giao Key Tự Động (Digital Store) | Đã có src thật + tích hợp key kích hoạt nền tảng |
 
 > Web chính (nền tảng cho thuê) nằm ở thư mục gốc của repo — không nằm trong `sites/`.

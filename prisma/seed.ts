@@ -67,59 +67,22 @@ async function main() {
     await prisma.durationOption.upsert({ where: { months: d.months }, update: {}, create: d });
   }
 
-  // ---- Mau website mau (admin sua/xoa/them trong Admin > Mau website) ----
+  // ---- Mau website THAT (admin sua/xoa/them trong Admin > Mau website) ----
+  // Hien chi co MOT mau co src that: Digital Store o sites/shop-san-pham-so.
+  // Anh bia + gallery la anh chup THAT cua ban demo, nam trong public/mau/.
   const templates = [
     {
-      name: "Shop Bán Hàng Tổng Hợp", slug: "shop-ban-hang-tong-hop", category: "Bán hàng",
-      description: "Mẫu thương mại điện tử đầy đủ: giỏ hàng, thanh toán, quản lý sản phẩm, đơn hàng, mã giảm giá. Phù hợp mọi ngành hàng.",
-      coverImage: "https://picsum.photos/seed/shop-tong-hop/900/560",
-      gallery: "https://picsum.photos/seed/shop-tong-hop-1/900/560\nhttps://picsum.photos/seed/shop-tong-hop-2/900/560",
-      features: "Giỏ hàng + thanh toán online\nQuản lý sản phẩm, tồn kho\nMã giảm giá, flash sale\nĐơn hàng + trạng thái giao hàng",
-      demoUrl: "", folderSlug: "shop-ban-hang", premium: false, minPlanTier: 2, sort: 1,
-    },
-    {
       name: "Shop Sản Phẩm Số — Giao Key Tự Động", slug: "shop-san-pham-so", category: "Bán hàng",
-      description: "Bán tài khoản, key bản quyền, khoá học số: khách thanh toán xong hệ thống tự giao key/tài khoản qua email ngay lập tức.",
-      coverImage: "https://picsum.photos/seed/shop-so/900/560",
-      gallery: "https://picsum.photos/seed/shop-so-1/900/560",
-      features: "Giao key/tài khoản tự động sau thanh toán\nKho key theo FIFO\nThanh toán SePay/VietQR tự đối soát\nVí + điểm tích luỹ",
-      demoUrl: "", folderSlug: "shop-san-pham-so", premium: true, minPlanTier: 2, sort: 2,
-    },
-    {
-      name: "Doanh Nghiệp Giới Thiệu", slug: "doanh-nghiep-gioi-thieu", category: "Doanh nghiệp",
-      description: "Website công ty chuyên nghiệp: giới thiệu, dịch vụ, dự án đã làm, đội ngũ, tin tức và form liên hệ tư vấn.",
-      coverImage: "https://picsum.photos/seed/doanh-nghiep/900/560",
-      gallery: "https://picsum.photos/seed/doanh-nghiep-1/900/560",
-      features: "Trang dịch vụ + dự án\nBlog tin tức\nForm tư vấn đổ về hộp thư CMS\nĐa ngôn ngữ (tuỳ chọn)",
-      demoUrl: "", folderSlug: "doanh-nghiep", premium: false, minPlanTier: 1, sort: 3,
-    },
-    {
-      name: "Landing Page Bán Khoá Học", slug: "landing-khoa-hoc", category: "Landing page",
-      description: "Trang đích một trang tối ưu chuyển đổi: giới thiệu khoá học, học viên nói gì, bảng giá, đếm ngược ưu đãi, form đăng ký.",
-      coverImage: "https://picsum.photos/seed/landing-khoa/900/560",
-      gallery: "",
-      features: "Tối ưu chuyển đổi\nForm đăng ký + thông báo tức thì\nĐếm ngược khuyến mãi\nKết nối Pixel/Analytics",
-      demoUrl: "", folderSlug: "landing-khoa-hoc", premium: false, minPlanTier: 1, sort: 4,
-    },
-    {
-      name: "Nhà Hàng — Menu & Đặt Bàn", slug: "nha-hang-dat-ban", category: "Nhà hàng & F&B",
-      description: "Thực đơn trực tuyến đẹp mắt, đặt bàn online, giới thiệu không gian và chương trình ưu đãi theo tuần.",
-      coverImage: "https://picsum.photos/seed/nha-hang/900/560",
-      gallery: "https://picsum.photos/seed/nha-hang-1/900/560",
-      features: "Menu theo nhóm món, sửa giá trong CMS\nĐặt bàn online\nThư viện ảnh món ăn\nBản đồ + giờ mở cửa",
-      demoUrl: "", folderSlug: "nha-hang", premium: false, minPlanTier: 1, sort: 5,
-    },
-    {
-      name: "Spa & Làm Đẹp — Đặt Lịch", slug: "spa-dat-lich", category: "Dịch vụ",
-      description: "Giới thiệu dịch vụ, bảng giá, đội ngũ chuyên viên và đặt lịch hẹn trực tuyến có nhắc lịch tự động.",
-      coverImage: "https://picsum.photos/seed/spa/900/560",
-      gallery: "",
-      features: "Đặt lịch theo dịch vụ + chuyên viên\nBảng giá dịch vụ\nĐánh giá khách hàng\nNhắc lịch qua email",
-      demoUrl: "", folderSlug: "spa-lam-dep", premium: true, minPlanTier: 2, sort: 6,
+      description: "Shop bán sản phẩm số hoàn chỉnh (mã nguồn thật Digital Store): bán tài khoản, key bản quyền, gói dịch vụ số — khách thanh toán xong hệ thống tự giao key/tài khoản qua email ngay lập tức. Đầy đủ giỏ hàng, ví, điểm thưởng, flash sale, đánh giá và trang quản trị riêng cho chủ shop.",
+      coverImage: "/mau/shop-san-pham-so/cover.jpg",
+      gallery: "/mau/shop-san-pham-so/gallery-1.jpg\n/mau/shop-san-pham-so/gallery-2.jpg\n/mau/shop-san-pham-so/gallery-3.jpg",
+      features: "Giao key/tài khoản tự động ngay sau thanh toán\nThanh toán Stripe / PayPal / SePay — VietQR\nVí nạp tiền + điểm tích luỹ + flash sale\nTrang quản trị đầy đủ: sản phẩm, kho key FIFO, đơn hàng, voucher\nKích hoạt bản quyền với nền tảng bằng key riêng của từng lần thuê",
+      demoUrl: "https://digital-store-pink-eta.vercel.app", folderSlug: "shop-san-pham-so", premium: true, minPlanTier: 2, sort: 1,
     },
   ];
   for (const t of templates) {
-    await prisma.template.upsert({ where: { slug: t.slug }, update: {}, create: t });
+    const { slug, ...rest } = t;
+    await prisma.template.upsert({ where: { slug }, update: rest, create: t });
   }
 
   // ---- FAQ ----
