@@ -5,6 +5,10 @@
 html { scroll-behavior: smooth; }
 /* overflow-x: clip (khong phai hidden) de chan tran ngang o mobile ma khong pha position: sticky */
 html, body { overflow-x: clip; }
+/* Nguyen nhan tran ngang mobile: phan tu con cua grid/flex co min-width mac dinh
+   bang kich thuoc noi dung (anh lon, chuoi dai) nen lam ca cot rong hon man hinh.
+   Cho phep moi phan tu con trong khu vuc noi dung duoc co lai tu do. */
+main .grid > *, main .flex > *, footer .grid > *, footer .flex > * { min-width: 0; }
 body { @apply bg-slate-50 text-slate-800 antialiased; }
 ::selection { @apply bg-brand-600 text-white; }
 

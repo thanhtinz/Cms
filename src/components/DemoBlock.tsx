@@ -49,7 +49,7 @@ function DemoRow({ icon, chipClass, title, url }: { icon: string; chipClass: str
         aria-label={`Mở ${title}`}
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white transition hover:bg-slate-700"
       >
-        <i className="fa-solid fa-arrow-up-right" aria-hidden />
+        <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden />
       </a>
     </div>
   );

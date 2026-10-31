@@ -74,8 +74,8 @@ async function main() {
     {
       name: "Shop Sản Phẩm Số — Giao Key Tự Động", slug: "shop-san-pham-so", category: "Bán hàng",
       description: "Shop bán sản phẩm số hoàn chỉnh (mã nguồn thật Digital Store): bán tài khoản, key bản quyền, gói dịch vụ số — khách thanh toán xong hệ thống tự giao key/tài khoản qua email ngay lập tức. Đầy đủ giỏ hàng, ví, điểm thưởng, flash sale, đánh giá và trang quản trị riêng cho chủ shop.",
-      coverImage: "/hinh-mau/shop-san-pham-so/cover-v2.jpg",
-      gallery: "/hinh-mau/shop-san-pham-so/gallery-1.jpg\n/hinh-mau/shop-san-pham-so/gallery-2.jpg\n/hinh-mau/shop-san-pham-so/cover.jpg",
+      coverImage: "/hinh-mau/shop-san-pham-so/banner-1.jpg",
+      gallery: "/hinh-mau/shop-san-pham-so/banner-2.jpg\n/hinh-mau/shop-san-pham-so/banner-3.jpg\n/hinh-mau/shop-san-pham-so/banner-4.jpg",
       features: "Giao key/tài khoản tự động ngay sau thanh toán\nThanh toán Stripe / PayPal / SePay — VietQR\nVí nạp tiền + điểm tích luỹ + flash sale\nTrang quản trị đầy đủ: sản phẩm, kho key FIFO, đơn hàng, voucher\nKích hoạt bản quyền với nền tảng bằng key riêng của từng lần thuê",
       demoUrl: "https://digital-store-pink-eta.vercel.app",
       demoAdminUrl: "https://digital-store-pink-eta.vercel.app/admin",

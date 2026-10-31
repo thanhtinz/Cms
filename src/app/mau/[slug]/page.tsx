@@ -5,6 +5,7 @@ import { splitLines, formatVND, cheapestPackageFor } from "@/lib/utils";
 import RentForm from "@/components/RentForm";
 import TemplateCard from "@/components/TemplateCard";
 import DemoBlock from "@/components/DemoBlock";
+import TemplateGallery from "@/components/TemplateGallery";
 import { CheckIcon, PlayIcon, BoltIcon, ShieldIcon, GlobeIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -43,24 +44,9 @@ export default async function TemplateDetail({
       </nav>
 
       <div className="mt-5 grid gap-8 lg:grid-cols-5">
-        {/* Gallery */}
-        <div className="lg:col-span-3">
-          <div className="card overflow-hidden">
-            {gallery[0] ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={gallery[0]} alt={t.name} className="aspect-[16/10] w-full object-cover" />
-            ) : (
-              <div className="flex aspect-[16/10] items-center justify-center bg-gradient-to-br from-brand-100 to-slate-200 text-5xl font-black text-brand-300">{t.name.slice(0, 1)}</div>
-            )}
-          </div>
-          {gallery.length > 1 && (
-            <div className="mt-3 grid grid-cols-3 gap-3">
-              {gallery.slice(1, 4).map((g) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={g} src={g} alt="" className="card aspect-[16/10] w-full object-cover" />
-              ))}
-            </div>
-          )}
+        {/* Gallery — slider co nut qua/lai */}
+        <div className="min-w-0 lg:col-span-3">
+          <TemplateGallery images={gallery} name={t.name} />
 
           {/* Mo ta + tinh nang */}
           <div className="card mt-6 p-6">
@@ -105,7 +91,7 @@ export default async function TemplateDetail({
         </div>
 
         {/* Thong tin + CTA */}
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">{t.category}</span>
             {t.premium && <span className="rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-900">Premium</span>}

@@ -90,7 +90,7 @@ export default function RentForm({
       <input type="hidden" name="back" value={`/mau/${template.slug}`} />
       <input type="hidden" name="voucherCode" value={voucher?.code ?? ""} />
 
-      <div className="space-y-6 lg:col-span-3">
+      <div className="min-w-0 space-y-6 lg:col-span-3">
         {error && <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>}
 
         <section className="card p-5 sm:p-6">
@@ -157,7 +157,7 @@ export default function RentForm({
         </section>
       </div>
 
-      <aside className="lg:col-span-2">
+      <aside className="min-w-0 lg:col-span-2">
         <div className="card sticky top-24 overflow-hidden">
           <div className="bg-slate-900 px-5 py-4 text-white">
             <div className="text-xs uppercase tracking-wide text-slate-400">Đơn thuê của bạn</div>
