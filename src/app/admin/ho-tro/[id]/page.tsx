@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatDate, TICKET_STATUS } from "@/lib/utils";
 import { adminReplyTicketAction, setTicketStatusAction } from "@/lib/actions";
+import AiDraftButton from "@/components/admin/AiDraftButton";
 
 export const dynamic = "force-dynamic";
 
@@ -66,8 +67,11 @@ export default async function AdminTicketDetail({ params, searchParams }: { para
           <form action={adminReplyTicketAction} className="mt-6 border-t pt-5">
             <input type="hidden" name="ticketId" value={ticket.id} />
             <label className="label">Trả lời khách hàng</label>
-            <textarea name="body" required rows={4} className="input" placeholder="Nhập nội dung phản hồi..." />
-            <button className="btn-primary mt-3">Gửi trả lời</button>
+            <textarea id="admin-reply-box" name="body" required rows={4} className="input" placeholder="Nhập nội dung phản hồi..." />
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button className="btn-primary">Gửi trả lời</button>
+              <AiDraftButton ticketId={ticket.id} targetId="admin-reply-box" />
+            </div>
           </form>
         )}
       </div>

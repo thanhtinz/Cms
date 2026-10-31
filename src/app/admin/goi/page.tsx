@@ -13,7 +13,7 @@ export default async function AdminPlans({ searchParams }: { searchParams: { loi
         <h1 className="text-2xl font-bold">Gói thuê</h1>
         <Link href="/admin/goi/moi" className="btn-primary">+ Thêm gói</Link>
       </div>
-      <p className="mt-1 text-sm text-slate-500">Giá, giới hạn và tính năng từng gói sửa tại đây — trang Bảng giá và luồng thuê cập nhật theo ngay.</p>
+      <p className="mt-1 text-sm text-slate-500">Giá, giới hạn và tính năng từng gói sửa tại đây — luồng thuê trong trang chi tiết mẫu cập nhật theo ngay.</p>
       {searchParams.loi && <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">{searchParams.loi}</div>}
       <div className="card mt-5 overflow-x-auto">
         <table className="w-full min-w-[640px]">

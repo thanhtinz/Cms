@@ -16,6 +16,7 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   TICKET_STATUS: "Trạng thái ticket",
   ORDER_NOTE: "Ghi chú nội bộ đơn",
   LIFECYCLE: "Vòng đời thuê tự động",
+  PAYMENT_SEPAY: "Thanh toán SePay tự động",
 };
 
 // Ghi 1 dòng nhật ký cho thao tác admin vừa thực hiện. Best-effort:

@@ -11,6 +11,7 @@ import { checkVoucher } from "./voucher";
 import { quotaFromPackage, canAllocate } from "./quota";
 import { generateUniqueLicenseKey } from "./license";
 import { logActivity } from "./activity";
+import { confirmOrderPayment } from "./confirm";
 
 // ---------- AUTH ----------
 export async function registerAction(formData: FormData) {
@@ -567,9 +568,18 @@ export async function saveSettingsAction(formData: FormData) {
       capacityBandwidthGb: Math.max(1, Number(formData.get("capacityBandwidthGb") ?? 10000)),
       oversellRatio: Math.min(5, Math.max(1, Number(formData.get("oversellRatio") ?? 1))),
       footerText: String(formData.get("footerText") ?? "").trim(),
+      // AI tra loi tu dong: o key de trong = GIU key cu (form khong bao gio hien key that)
+      aiEnabled: formData.get("aiEnabled") === "on",
+      aiBaseUrl: String(formData.get("aiBaseUrl") ?? "").trim() || "https://api.openai.com/v1",
+      aiModel: String(formData.get("aiModel") ?? "").trim() || "gpt-4o-mini",
+      aiPrompt: String(formData.get("aiPrompt") ?? "").trim() || null,
+      ...(String(formData.get("aiApiKey") ?? "").trim() ? { aiApiKey: String(formData.get("aiApiKey")).trim() } : {}),
+      // SePay: tuong tu, o key de trong = giu key cu
+      sepayEnabled: formData.get("sepayEnabled") === "on",
+      ...(String(formData.get("sepayApiKey") ?? "").trim() ? { sepayApiKey: String(formData.get("sepayApiKey")).trim() } : {}),
     },
   });
-  await logActivity("SAVE_SETTINGS", "Cập nhật cài đặt hệ thống (thương hiệu, liên hệ, ngân hàng, DNS, sức chứa VPS, vòng đời thuê)");
+  await logActivity("SAVE_SETTINGS", "Cập nhật cài đặt hệ thống (thương hiệu, liên hệ, ngân hàng, DNS, sức chứa VPS, vòng đời thuê, AI, SePay)");
   bustSettingsCache();
   revalidatePath("/admin/cai-dat");
   revalidatePath("/");
@@ -580,79 +590,18 @@ export async function saveSettingsAction(formData: FormData) {
 export async function confirmPaymentAction(formData: FormData) {
   await requireAdmin();
   const orderId = String(formData.get("orderId") ?? "");
-  const order = await prisma.rentalOrder.findUnique({ where: { id: orderId }, include: { site: true, timePackage: true, plan: true } });
-  if (!order || order.status !== "CHO_THANH_TOAN") redirect("/admin/don-thue");
-  // Don tao website MOI: kiem tra suc chua VPS truoc khi nhan tien —
-  // han muc cua goi se duoc cap tu dong cho website sap tao.
-  const quota = quotaFromPackage(order.timePackage ?? order.plan);
-  if (!order.renewalSiteId && !order.site) {
-    const cap = await canAllocate(quota);
-    if (!cap.ok) {
-      redirect(`/admin/don-thue/${orderId}?loi=${encodeURIComponent("Chưa xác nhận được: " + (cap.reason ?? "hệ thống đã hết dung lượng"))}`);
-    }
-  }
-  await prisma.rentalOrder.update({
-    where: { id: orderId },
-    data: { status: "DA_THANH_TOAN", paidAt: new Date() },
-  });
-  await logActivity("CONFIRM_PAYMENT", `Xác nhận thanh toán đơn ${order.code} — ${order.total.toLocaleString("vi-VN")} ₫ (${order.renewalSiteId ? "gia hạn" : "thuê mới"}, tên miền ${order.domain})`);
-  if (order.renewalSiteId) {
-    // Don GIA HAN: cong them thoi gian vao website hien tai (tu han cu neu con han, tu hom nay neu da het)
-    const site = await prisma.site.findUnique({ where: { id: order.renewalSiteId } });
-    if (site) {
-      const now = new Date();
-      const base = site.expiresAt && site.expiresAt > now ? site.expiresAt : now;
-      const expires = new Date(base);
-      expires.setMonth(expires.getMonth() + order.durationMonths);
-      await prisma.site.update({
-        where: { id: site.id },
-        data: {
-          expiresAt: expires,
-          status: "DANG_HOAT_DONG",
-          timePackageId: order.timePackageId ?? site.timePackageId,
-          // Gia han theo goi nao thi han muc cap nhat theo goi do
-          quotaStorageGb: quota.storageGb,
-          quotaBandwidthGb: quota.bandwidthGb,
-          quotaPages: quota.pages,
-          quotaProducts: quota.products,
-          quotaCmsUsers: quota.cmsUsers,
-        },
-      });
-    }
-    revalidatePath("/admin/don-thue");
-    redirect(`/admin/don-thue/${orderId}?ok=${encodeURIComponent(`Đã xác nhận gia hạn — website đã được cộng thêm ${order.durationMonths} tháng`)}`);
-  }
-  if (!order.site) {
-    // He thong tu tao ban ghi website: slug duy nhat + token DNS rieng
-    let base = slugify(order.siteName) || "website";
-    let slug = base;
-    let i = 2;
-    while (await prisma.site.findUnique({ where: { slug } })) slug = `${base}-${i++}`;
-    await prisma.site.create({
-      data: {
-        userId: order.userId,
-        orderId: order.id,
-        templateId: order.templateId,
-        planId: order.planId,
-        timePackageId: order.timePackageId,
-        name: order.siteName,
-        slug,
-        domain: order.domain,
-        dnsToken: crypto.randomBytes(10).toString("hex"),
-        licenseKey: await generateUniqueLicenseKey(), // moi lan thue 1 key kich hoat rieng
-        status: "CHO_TRO_DNS",
-        // TU DONG CHIA DUNG LUONG: han muc cua goi duoc cap ngay cho website nay
-        quotaStorageGb: quota.storageGb,
-        quotaBandwidthGb: quota.bandwidthGb,
-        quotaPages: quota.pages,
-        quotaProducts: quota.products,
-        quotaCmsUsers: quota.cmsUsers,
-        usagePeriod: new Date().toISOString().slice(0, 7),
-      },
-    });
+  const order = await prisma.rentalOrder.findUnique({ where: { id: orderId }, select: { durationMonths: true } });
+  if (!order) redirect("/admin/don-thue");
+  // Logic xac nhan dung chung voi webhook SePay (src/lib/confirm.ts)
+  const res = await confirmOrderPayment(orderId, "ADMIN");
+  if (!res.ok) {
+    redirect(`/admin/don-thue/${orderId}?loi=${encodeURIComponent("Chưa xác nhận được: " + res.reason)}`);
   }
   revalidatePath("/admin/don-thue");
-  redirect(`/admin/don-thue/${orderId}?ok=${encodeURIComponent(`Đã xác nhận thanh toán và tạo website`)}`);
+  if (res.kind === "renewal") {
+    redirect(`/admin/don-thue/${orderId}?ok=${encodeURIComponent(`Đã xác nhận gia hạn — website đã được cộng thêm ${order.durationMonths} tháng`)}`);
+  }
+  redirect(`/admin/don-thue/${orderId}?ok=${encodeURIComponent("Đã xác nhận thanh toán và tạo website")}`);
 }
 
 // Admin cap lai key kich hoat cho website (key cu vo hieu, trang thai kich hoat dat lai)

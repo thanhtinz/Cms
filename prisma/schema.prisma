@@ -270,6 +270,15 @@ model Setting {
   capacityDiskGb      Int   @default(200) // tong dung luong dia danh cho website khach
   capacityBandwidthGb Int   @default(10000) // tong bang thong/thang cua VPS
   oversellRatio       Float @default(1) // 1 = khong ban vuot; 1.5 = cap toi da 150% suc chua
+  // --- AI tra loi tu dong (OpenAI-compatible) ---
+  aiEnabled  Boolean @default(false)
+  aiApiKey   String?
+  aiBaseUrl  String  @default("https://api.openai.com/v1")
+  aiModel    String  @default("gpt-4o-mini")
+  aiPrompt   String? // huong dan them cho AI (giong van, uu tien...)
+  // --- Thanh toan tu dong qua SePay (webhook doi soat) ---
+  sepayEnabled Boolean @default(false)
+  sepayApiKey  String? // khoa xac thuc webhook (khop o SePay: Authorization: Apikey <key>)
   updatedAt      DateTime @updatedAt
 }
 

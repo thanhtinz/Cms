@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma, getSettings } from "@/lib/db";
 import { formatVND } from "@/lib/utils";
 import { describeVoucher } from "@/lib/voucher-shared";
+import { getCurrentUser } from "@/lib/auth";
+import { askAssistant } from "@/lib/ai";
 
 export const runtime = "nodejs";
 
@@ -21,7 +23,19 @@ const DEFAULT_SUGS = ["Giá các gói thời gian?", "Tên miền cần gì?", "
 
 export async function POST(req: Request) {
   const { message } = await req.json().catch(() => ({ message: "" }));
-  const q = norm(String(message ?? ""));
+  const raw = String(message ?? "").trim();
+  if (!raw) return NextResponse.json({ answer: "Bạn nhập câu hỏi giúp mình nhé.", suggestions: DEFAULT_SUGS });
+  // UU TIEN AI THAT khi da cau hinh (kem ngu canh don/website cua chinh khach
+  // dang dang nhap); chua cau hinh hoac AI loi -> lui ve bo quy tac ben duoi.
+  const user = await getCurrentUser().catch(() => null);
+  const aiAnswer = await askAssistant(raw, user?.id ?? null).catch(() => null);
+  if (aiAnswer) return NextResponse.json({ answer: aiAnswer, suggestions: DEFAULT_SUGS });
+  return ruleAnswer(raw);
+}
+
+// Bo tra loi theo quy tac (du phong khi chua bat AI)
+async function ruleAnswer(rawMessage: string) {
+  const q = norm(rawMessage);
   if (!q) return NextResponse.json({ answer: "Bạn nhập câu hỏi giúp mình nhé.", suggestions: DEFAULT_SUGS });
 
   const [settings, packages, faqs, vouchers, templates] = await Promise.all([

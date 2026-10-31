@@ -6,7 +6,6 @@ import AppMenu, { type AppMenuUser, type AppMenuBadges } from "./AppMenu";
 
 const PUBLIC_NAV = [
   { href: "/mau", label: "Kho mẫu" },
-  { href: "/bang-gia", label: "Bảng giá" },
   { href: "/tin-tuc", label: "Tin tức" },
   { href: "/#cach-hoat-dong", label: "Cách hoạt động" },
   { href: "/#faq", label: "Hỏi đáp" },

@@ -1,10 +1,15 @@
+import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
 import { saveSettingsAction } from "@/lib/actions";
+import CopyText from "@/components/CopyText";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettings({ searchParams }: { searchParams: { ok?: string } }) {
   const s = await prisma.setting.upsert({ where: { id: "main" }, update: {}, create: { id: "main" } });
+  const h = headers();
+  const host = h.get("host") ?? "cms-swart-delta.vercel.app";
+  const webhookUrl = `https://${host}/api/sepay/webhook`;
   return (
     <div>
       <h1 className="text-2xl font-bold">Cài đặt hệ thống</h1>
@@ -63,6 +68,59 @@ export default async function AdminSettings({ searchParams }: { searchParams: { 
             <div><label className="label">Ân hạn sau hết hạn</label><input name="graceDays" type="number" defaultValue={s.graceDays} className="input" /></div>
             <div><label className="label">Lưu trữ dữ liệu sau tạm ngưng</label><input name="archiveDays" type="number" defaultValue={s.archiveDays} className="input" /></div>
           </div>
+        </section>
+        <section>
+          <h2 className="font-bold"><i className="fa-solid fa-bolt mr-2 text-amber-500" aria-hidden /> Thanh toán tự động qua SePay</h2>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">
+            Bật lên là khách chuyển khoản xong hệ thống TỰ xác nhận đơn, tự tạo website/gia hạn — không cần admin bấm tay.
+            Cách nối: đăng nhập SePay → mục Webhook → tạo webhook mới với URL bên dưới, kiểu xác thực <b>Apikey</b> và khoá trùng với ô khoá ở đây;
+            trong cấu hình SePay nhớ đặt tiền tố mã thanh toán là <b>TW</b> (mã đơn của nền tảng). Khách vẫn chuyển vào đúng tài khoản ngân hàng/VietQR ở mục trên, nội dung là mã đơn.
+          </p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label">URL webhook (dán vào SePay)</label>
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <code className="min-w-0 flex-1 truncate font-mono text-xs text-slate-700">{webhookUrl}</code>
+                <CopyText text={webhookUrl} label="Chép" />
+              </div>
+            </div>
+            <div>
+              <label className="label">Khoá xác thực (API Key của webhook)</label>
+              <input name="sepayApiKey" type="password" autoComplete="new-password" placeholder={s.sepayApiKey ? "•••••••• (đã lưu — nhập mới nếu muốn đổi)" : "Tự đặt một chuỗi bí mật, vd: tw-sepay-2026-xxxx"} className="input" />
+              <p className="mt-1 text-xs text-slate-400">Tự đặt một chuỗi bí mật bất kỳ rồi nhập Y HỆT vào SePay. Để trống ô này khi lưu = giữ khoá cũ.</p>
+            </div>
+          </div>
+          <label className="mt-3 flex cursor-pointer items-center gap-2.5 text-sm font-medium text-slate-700">
+            <input type="checkbox" name="sepayEnabled" defaultChecked={s.sepayEnabled} className="h-4 w-4 accent-[#0ea5a4]" />
+            Bật đối soát tự động qua SePay
+            {s.sepayEnabled ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">Đang bật</span> : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500">Đang tắt</span>}
+          </label>
+        </section>
+        <section>
+          <h2 className="font-bold"><i className="fa-solid fa-robot mr-2 text-brand-600" aria-hidden /> Trợ lý AI trả lời tự động</h2>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">
+            Khi bật và có API key, bong bóng hỗ trợ sẽ dùng AI thật để trả lời mọi câu hỏi của khách, dựa trên dữ kiện sống của nền tảng
+            (giá gói, mẫu, voucher, FAQ — và đơn/website của chính khách đang đăng nhập). Chưa có key hoặc AI lỗi thì hệ thống tự dùng bộ trả lời theo quy tắc như hiện tại.
+            Dùng được mọi nhà cung cấp theo chuẩn OpenAI (OpenAI, OpenRouter...): chỉ cần đổi địa chỉ máy chủ và model.
+          </p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-3">
+            <div><label className="label">Địa chỉ máy chủ AI (Base URL)</label><input name="aiBaseUrl" defaultValue={s.aiBaseUrl} className="input" /></div>
+            <div><label className="label">Model</label><input name="aiModel" defaultValue={s.aiModel} className="input" /></div>
+            <div>
+              <label className="label">API Key</label>
+              <input name="aiApiKey" type="password" autoComplete="new-password" placeholder={s.aiApiKey ? "•••••••• (đã lưu — nhập mới nếu muốn đổi)" : "sk-..."} className="input" />
+              <p className="mt-1 text-xs text-slate-400">Để trống khi lưu = giữ key cũ.</p>
+            </div>
+            <div className="sm:col-span-3">
+              <label className="label">Hướng dẫn thêm cho AI (không bắt buộc)</label>
+              <textarea name="aiPrompt" rows={2} defaultValue={s.aiPrompt ?? ""} placeholder="VD: Xưng hô thân thiện, luôn gợi ý gói 6 tháng là gói được chọn nhiều nhất..." className="input" />
+            </div>
+          </div>
+          <label className="mt-3 flex cursor-pointer items-center gap-2.5 text-sm font-medium text-slate-700">
+            <input type="checkbox" name="aiEnabled" defaultChecked={s.aiEnabled} className="h-4 w-4 accent-[#0ea5a4]" />
+            Bật AI trả lời tự động trong bong bóng hỗ trợ
+            {s.aiEnabled ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">Đang bật</span> : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500">Đang tắt</span>}
+          </label>
         </section>
         <button className="btn-primary px-6 py-2.5">Lưu tất cả cài đặt</button>
       </form>

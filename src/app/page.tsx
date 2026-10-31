@@ -70,8 +70,8 @@ export default async function HomePage() {
               <Link href="/mau" className="btn-primary px-6 py-3 text-base shadow-xl shadow-brand-600/30">
                 {settings.heroCtaText} <ArrowRightIcon className="ml-1.5 h-4 w-4" />
               </Link>
-              <Link href="/bang-gia" className="inline-flex items-center justify-center rounded-lg border border-white/25 bg-white/5 px-6 py-3 text-base font-semibold text-white transition hover:bg-white/15">
-                Xem bảng giá
+              <Link href="/#cach-hoat-dong" className="inline-flex items-center justify-center rounded-lg border border-white/25 bg-white/5 px-6 py-3 text-base font-semibold text-white transition hover:bg-white/15">
+                Cách hoạt động
               </Link>
             </div>
             <ul className="mt-7 space-y-2 text-sm text-slate-300">
