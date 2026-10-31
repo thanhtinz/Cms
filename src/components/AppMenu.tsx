@@ -26,21 +26,6 @@ const DASHBOARD_NAV = [
   { href: "/portal/ho-so", label: "Hồ sơ & bảo mật", icon: "fa-user-gear" },
 ];
 
-const ADMIN_NAV = [
-  { href: "/admin", label: "Tổng quan quản trị", icon: "fa-gauge-high" },
-  { href: "/admin/don-thue", label: "Đơn thuê", icon: "fa-receipt", badgeKey: "orders" as const },
-  { href: "/admin/website", label: "Website khách", icon: "fa-globe" },
-  { href: "/admin/khach-hang", label: "Khách hàng", icon: "fa-users" },
-  { href: "/admin/ho-tro", label: "Hỗ trợ khách hàng", icon: "fa-headset", badgeKey: "support" as const },
-  { href: "/admin/mau", label: "Mẫu website", icon: "fa-layer-group" },
-  { href: "/admin/goi-thoi-gian", label: "Gói thời gian", icon: "fa-box-open" },
-  { href: "/admin/voucher", label: "Voucher giảm giá", icon: "fa-ticket" },
-  { href: "/admin/tin-tuc", label: "Tin tức", icon: "fa-newspaper" },
-  { href: "/admin/faq", label: "FAQ", icon: "fa-circle-question" },
-  { href: "/admin/nhat-ky", label: "Nhật ký hoạt động", icon: "fa-clock-rotate-left" },
-  { href: "/admin/cai-dat", label: "Cài đặt hệ thống", icon: "fa-gear" },
-];
-
 type NavItem = { href: string; label: string; icon: string; badgeKey?: "support" | "orders" };
 
 function itemActive(pathname: string, href: string) {
@@ -146,10 +131,14 @@ export default function AppMenu({
                   <div className="space-y-1">{DASHBOARD_NAV.map(renderItem)}</div>
 
                   {user.role === "ADMIN" && (
-                    <>
-                      {sectionTitle("Quản trị hệ thống")}
-                      <div className="space-y-1">{ADMIN_NAV.map(renderItem)}</div>
-                    </>
+                    <Link href="/admin" className="mt-4 flex items-center gap-3 rounded-2xl bg-slate-900 p-4 text-white transition hover:bg-slate-800">
+                      <i className="fa-solid fa-shield-halved text-lg text-brand-300" aria-hidden />
+                      <span className="min-w-0 flex-1 leading-tight">
+                        <span className="block font-bold">Vào khu vực quản trị</span>
+                        <span className="block text-xs text-slate-300">Khu Admin riêng biệt — quản lý toàn hệ thống</span>
+                      </span>
+                      <i className="fa-solid fa-arrow-right text-slate-400" aria-hidden />
+                    </Link>
                   )}
 
                   {sectionTitle("Khám phá")}
