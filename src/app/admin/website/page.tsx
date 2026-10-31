@@ -18,7 +18,7 @@ export default async function AdminSites() {
               <tr key={s.id} className="border-b last:border-0">
                 <td className="td font-medium">{s.name}<div className="text-xs text-slate-400">{s.slug}</div></td>
                 <td className="td">{s.user.name}</td>
-                <td className="td">{s.template.name}<div className="text-xs text-slate-400">{s.timePackage?.name ?? s.plan?.name ?? "—"}</div></td>
+                <td className="td">{s.template.name}<div className="text-xs text-slate-400">{s.timePackage?.name ?? s.plan?.name ?? "—"}</div><div className="text-xs text-slate-400">Đã cấp: {s.quotaStorageGb} GB đĩa · {s.quotaBandwidthGb === -1 ? "BW không giới hạn" : `${s.quotaBandwidthGb} GB BW`} · Đã dùng {(s.usedStorageMb / 1024).toFixed(2)} GB</div></td>
                 <td className="td">{s.domain}</td>
                 <td className="td"><span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${(SITE_STATUS[s.status] ?? SITE_STATUS.HET_HAN).color}`}>{(SITE_STATUS[s.status] ?? SITE_STATUS.HET_HAN).label}</span></td>
                 <td className="td">{formatDate(s.expiresAt)}</td>

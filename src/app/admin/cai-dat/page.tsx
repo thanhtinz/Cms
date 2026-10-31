@@ -48,6 +48,15 @@ export default async function AdminSettings({ searchParams }: { searchParams: { 
           <p className="mt-1 text-xs text-slate-400">Điền đủ 3 ô này, trang thanh toán của khách tự hiện mã VietQR kèm mã đơn để đối soát.</p>
         </section>
         <section>
+          <h2 className="font-bold">Sức chứa VPS (tự động chia dung lượng)</h2>
+          <p className="mt-1 text-xs text-slate-400">Khai báo theo cấu hình máy chủ thật của bạn. Mỗi khi một website được tạo, hệ thống tự động cấp hạn mức của gói cho website đó và cộng dồn vào đây — hết dung lượng là hệ thống dừng nhận đơn tạo mới (gia hạn vẫn được) và báo rõ lý do cho admin.</p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-3">
+            <div><label className="label">Tổng dung lượng đĩa cho web khách (GB)</label><input name="capacityDiskGb" type="number" min={1} defaultValue={s.capacityDiskGb} className="input" /></div>
+            <div><label className="label">Tổng băng thông / tháng (GB)</label><input name="capacityBandwidthGb" type="number" min={1} defaultValue={s.capacityBandwidthGb} className="input" /></div>
+            <div><label className="label">Hệ số bán vượt (1 = không vượt)</label><input name="oversellRatio" type="number" step="0.1" min={1} max={5} defaultValue={s.oversellRatio} className="input" /><p className="mt-1 text-xs text-slate-400">VD 1.5 = cấp tối đa 150% sức chứa (dựa trên thực tế khách hiếm khi dùng hết hạn mức).</p></div>
+          </div>
+        </section>
+        <section>
           <h2 className="font-bold">Vòng đời thuê bao (ngày)</h2>
           <div className="mt-3 grid gap-4 sm:grid-cols-3">
             <div><label className="label">Dùng thử miễn phí</label><input name="trialDays" type="number" defaultValue={s.trialDays} className="input" /></div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { formatVND, formatDate, SITE_STATUS, TICKET_STATUS } from "@/lib/utils";
+import { getCapacity } from "@/lib/quota";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ function daysLeft(d: Date | null) {
 // Tong quan quan tri: doanh thu, viec can xu ly, don/web/ticket moi
 export default async function AdminDashboard() {
   const in30 = new Date(Date.now() + 30 * 86400000);
-  const [templates, packages, orders, sites, customers, paidAgg, pendingCount, waitingDns, openTickets, expiringSites, recentTickets] = await Promise.all([
+  const [templates, packages, orders, sites, customers, paidAgg, pendingCount, waitingDns, openTickets, expiringSites, recentTickets, capacity] = await Promise.all([
     prisma.template.count({ where: { status: "PUBLISHED" } }),
     prisma.timePackage.count({ where: { active: true } }),
     prisma.rentalOrder.findMany({ orderBy: { createdAt: "desc" }, take: 8, include: { user: true, template: true } }),
@@ -34,7 +35,10 @@ export default async function AdminDashboard() {
       orderBy: { updatedAt: "desc" },
       take: 5,
     }),
+    getCapacity(),
   ]);
+  const diskPct = capacity.limitDiskGb > 0 ? Math.min(100, Math.round((capacity.allocatedDiskGb / capacity.limitDiskGb) * 100)) : 0;
+  const bwPct = capacity.limitBandwidthGb > 0 ? Math.min(100, Math.round((capacity.allocatedBandwidthGb / capacity.limitBandwidthGb) * 100)) : 0;
 
   const cards = [
     { icon: "fa-sack-dollar", label: "Doanh thu đã thu", value: formatVND(paidAgg._sum.total ?? 0), sub: `${paidAgg._count} đơn đã thanh toán`, href: "/admin/don-thue" },
@@ -63,6 +67,32 @@ export default async function AdminDashboard() {
             </div>
           </Link>
         ))}
+      </div>
+
+      <div className="card mt-6 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-bold text-slate-900"><i className="fa-solid fa-server mr-2 text-brand-600" aria-hidden /> Dung lượng hệ thống (VPS)</h2>
+          <Link href="/admin/cai-dat" className="text-sm font-semibold text-brand-700 hover:underline">Cấu hình sức chứa →</Link>
+        </div>
+        <p className="mt-1 text-sm text-slate-500">
+          Đã tự động cấp cho {capacity.siteCount} website · Sức chứa khai báo {capacity.capacityDiskGb} GB đĩa / {capacity.capacityBandwidthGb.toLocaleString("vi-VN")} GB băng thông · Hệ số bán vượt ×{capacity.oversellRatio}
+        </p>
+        <div className="mt-4 grid gap-5 md:grid-cols-2">
+          <div>
+            <div className="flex justify-between text-sm"><span className="font-medium text-slate-700">Dung lượng đĩa đã cấp</span><span>{capacity.allocatedDiskGb} / {capacity.limitDiskGb} GB ({diskPct}%)</span></div>
+            <div className="mt-1.5 h-3 overflow-hidden rounded-full bg-slate-100">
+              <div className={`h-full rounded-full ${diskPct >= 90 ? "bg-red-500" : diskPct >= 70 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${diskPct}%` }} />
+            </div>
+            <p className="mt-1 text-xs text-slate-400">Còn trống {capacity.freeDiskGb} GB cho website mới.</p>
+          </div>
+          <div>
+            <div className="flex justify-between text-sm"><span className="font-medium text-slate-700">Băng thông đã cấp / tháng</span><span>{capacity.allocatedBandwidthGb.toLocaleString("vi-VN")} / {capacity.limitBandwidthGb.toLocaleString("vi-VN")} GB ({bwPct}%)</span></div>
+            <div className="mt-1.5 h-3 overflow-hidden rounded-full bg-slate-100">
+              <div className={`h-full rounded-full ${bwPct >= 90 ? "bg-red-500" : bwPct >= 70 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${bwPct}%` }} />
+            </div>
+            <p className="mt-1 text-xs text-slate-400">Chưa tính các gói băng thông không giới hạn hợp lý.</p>
+          </div>
+        </div>
       </div>
 
       <div className="mt-8 grid items-start gap-6 xl:grid-cols-2">

@@ -50,6 +50,30 @@ export default async function PortalSiteDetail({ params, searchParams }: { param
         </dl>
       </div>
 
+      <div className="card mt-6 p-6">
+        <h2 className="font-bold text-slate-900"><i className="fa-solid fa-server mr-2 text-brand-600" aria-hidden /> Hạn mức tài nguyên của website</h2>
+        <p className="mt-1 text-sm text-slate-500">Hạn mức được hệ thống tự động cấp theo {site.timePackage?.name ?? "gói của bạn"} khi website được tạo — nâng gói khi gia hạn để tăng hạn mức.</p>
+        <div className="mt-4 grid gap-5 md:grid-cols-2">
+          <div>
+            <div className="flex justify-between text-sm"><span className="font-medium text-slate-700">Dung lượng lưu trữ</span><span>{(site.usedStorageMb / 1024).toFixed(2)} / {site.quotaStorageGb} GB</span></div>
+            <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-brand-500" style={{ width: `${site.quotaStorageGb > 0 ? Math.min(100, (site.usedStorageMb / (site.quotaStorageGb * 1024)) * 100) : 0}%` }} />
+            </div>
+          </div>
+          <div>
+            <div className="flex justify-between text-sm"><span className="font-medium text-slate-700">Băng thông tháng này</span><span>{site.usedBandwidthGb} / {site.quotaBandwidthGb === -1 ? "Không giới hạn hợp lý" : `${site.quotaBandwidthGb} GB`}</span></div>
+            <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-brand-500" style={{ width: `${site.quotaBandwidthGb > 0 ? Math.min(100, (site.usedBandwidthGb / site.quotaBandwidthGb) * 100) : 0}%` }} />
+            </div>
+          </div>
+        </div>
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+          <div className="rounded-xl bg-slate-50 px-3 py-2.5"><dt className="text-slate-500">Sản phẩm tối đa</dt><dd className="font-bold">{site.quotaProducts === -1 ? "Không giới hạn" : site.quotaProducts}</dd></div>
+          <div className="rounded-xl bg-slate-50 px-3 py-2.5"><dt className="text-slate-500">Trang tối đa</dt><dd className="font-bold">{site.quotaPages === -1 ? "Không giới hạn" : site.quotaPages}</dd></div>
+          <div className="rounded-xl bg-slate-50 px-3 py-2.5"><dt className="text-slate-500">Tài khoản quản trị CMS</dt><dd className="font-bold">{site.quotaCmsUsers}</dd></div>
+        </dl>
+      </div>
+
       {site.status === "CHO_TRO_DNS" && (
         <div className="card mt-6 p-6">
           <h2 className="text-lg font-bold text-slate-900">Kết nối tên miền {site.domain}</h2>

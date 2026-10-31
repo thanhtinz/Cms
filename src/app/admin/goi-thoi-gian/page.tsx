@@ -1,10 +1,11 @@
 import { prisma } from "@/lib/db";
 import { saveTimePackageAction, deleteTimePackageAction } from "@/lib/actions";
 import { formatVND } from "@/lib/utils";
+import { getCapacity, quotaFromPackage, fitsMore } from "@/lib/quota";
 
 export const dynamic = "force-dynamic";
 
-function PkgForm({ p }: { p?: any }) {
+function PkgForm({ p, fits }: { p?: any; fits?: number }) {
   const isNew = !p;
   return (
     <form action={saveTimePackageAction} className={`card space-y-3 p-5 ${isNew ? "border-dashed" : ""}`}>
@@ -18,6 +19,7 @@ function PkgForm({ p }: { p?: any }) {
             </span>
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${p.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>{p.active ? "Đang bán" : "Đã tắt"}</span>
             {p.highlight && <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Nổi bật</span>}
+            {fits !== undefined && <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">Còn cấp được ~{fits} website gói này</span>}
           </>
         )}
       </div>
@@ -51,10 +53,18 @@ function PkgForm({ p }: { p?: any }) {
 }
 
 export default async function AdminTimePackages({ searchParams }: { searchParams: { ok?: string; loi?: string } }) {
-  const packages = await prisma.timePackage.findMany({ orderBy: { sort: "asc" } });
+  const [packages, capacity] = await Promise.all([
+    prisma.timePackage.findMany({ orderBy: { sort: "asc" } }),
+    getCapacity(),
+  ]);
   return (
     <div>
       <h1 className="text-2xl font-bold">Gói thời gian</h1>
+      <div className="mt-3 rounded-2xl border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-900">
+        <i className="fa-solid fa-server mr-2" aria-hidden />
+        Dung lượng VPS: đã cấp <b>{capacity.allocatedDiskGb}/{capacity.limitDiskGb} GB</b> đĩa cho {capacity.siteCount} website — còn trống <b>{capacity.freeDiskGb} GB</b>.
+        Khi khách thuê, hạn mức của gói (dung lượng, băng thông, sản phẩm, tài khoản CMS) được <b>tự động cấp</b> cho website của họ; hết dung lượng hệ thống sẽ dừng tạo website mới và báo rõ cho admin.
+      </div>
       <p className="mt-1 text-sm text-slate-500">
         Mô hình giá hiện tại: khách chọn đúng <b>một gói thời gian</b> — giá là tổng trọn gói cho cả kỳ thuê, không còn chọn gói tháng × thời hạn.
         Tier của gói quyết định mẫu nào dùng được (mẫu Premium yêu cầu tier cao). Các gói tháng/thời hạn cũ vẫn giữ trong hệ thống cho đơn cũ nhưng không còn bán.
@@ -62,7 +72,7 @@ export default async function AdminTimePackages({ searchParams }: { searchParams
       {searchParams.ok && <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{searchParams.ok}</div>}
       {searchParams.loi && <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{searchParams.loi}</div>}
       <div className="mt-5 space-y-4">
-        {packages.map((p) => <PkgForm key={p.id} p={p} />)}
+        {packages.map((p) => <PkgForm key={p.id} p={p} fits={fitsMore(capacity, quotaFromPackage(p))} />)}
         {packages.length === 0 && <p className="text-sm text-slate-500">Chưa có gói nào — thêm gói đầu tiên bên dưới.</p>}
       </div>
       <div className="mt-6"><PkgForm /></div>
