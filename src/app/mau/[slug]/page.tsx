@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { splitLines, formatVND, cheapestPackageFor } from "@/lib/utils";
 import RentForm from "@/components/RentForm";
 import TemplateCard from "@/components/TemplateCard";
+import DemoBlock from "@/components/DemoBlock";
 import { CheckIcon, PlayIcon, BoltIcon, ShieldIcon, GlobeIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -92,6 +93,15 @@ export default async function TemplateDetail({
               ))}
             </div>
           </div>
+
+          {/* LIVE DEMO — trang khach, admin panel, tai khoan demo, web that */}
+          <DemoBlock
+            demoUrl={t.demoUrl}
+            demoAdminUrl={t.demoAdminUrl}
+            demoAccount={t.demoAccount}
+            demoPassword={t.demoPassword}
+            liveSiteUrl={t.liveSiteUrl}
+          />
         </div>
 
         {/* Thong tin + CTA */}

@@ -23,7 +23,11 @@ export default async function AdminTemplateEdit({ params }: { params: { id: stri
           <div><label className="label">Ngành nghề</label><input name="category" defaultValue={t?.category ?? ""} placeholder="Bán hàng / Doanh nghiệp / Spa..." className="input" /></div>
           <div><label className="label">Thư mục src trong sites/</label><input name="folderSlug" defaultValue={t?.folderSlug ?? ""} placeholder="vd: shop-thoi-trang" className="input" /></div>
           <div><label className="label">Ảnh bìa (URL)</label><input name="coverImage" defaultValue={t?.coverImage ?? ""} className="input" /></div>
-          <div><label className="label">Link demo sống (URL)</label><input name="demoUrl" defaultValue={t?.demoUrl ?? ""} className="input" /></div>
+          <div><label className="label">Link demo sống — Trang khách (URL)</label><input name="demoUrl" defaultValue={t?.demoUrl ?? ""} className="input" /></div>
+          <div><label className="label">Link demo — Admin Panel (URL)</label><input name="demoAdminUrl" defaultValue={t?.demoAdminUrl ?? ""} placeholder="https://demo.../admin" className="input" /></div>
+          <div><label className="label">Tài khoản đăng nhập demo (hiện công khai)</label><input name="demoAccount" defaultValue={t?.demoAccount ?? ""} placeholder="vd: admin@demo.vn" className="input" /></div>
+          <div><label className="label">Mật khẩu đăng nhập demo (hiện công khai)</label><input name="demoPassword" defaultValue={t?.demoPassword ?? ""} placeholder="Mật khẩu của tài khoản demo chuyên cho khách xem" className="input" /></div>
+          <div className="sm:col-span-2"><label className="label">Website thật đang kinh doanh bằng mẫu này (URL, hiện ở khối Live demo)</label><input name="liveSiteUrl" defaultValue={t?.liveSiteUrl ?? ""} placeholder="https://shop-that.vn" className="input" /></div>
           <div>
             <label className="label">Tier gói thời gian tối thiểu được dùng mẫu</label>
             <select name="minPlanTier" defaultValue={t?.minPlanTier ?? 1} className="input">

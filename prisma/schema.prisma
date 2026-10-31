@@ -43,6 +43,10 @@ model Template {
   gallery     String        @default("") // moi URL 1 dong
   features    String        @default("") // moi tinh nang 1 dong
   demoUrl     String?
+  demoAdminUrl String? // link Admin Panel cua ban demo
+  demoAccount  String? // tai khoan dang nhap demo (hien cong khai o trang chi tiet)
+  demoPassword String? // mat khau dang nhap demo
+  liveSiteUrl  String? // website that dang kinh doanh bang mau nay (minh chung)
   folderSlug  String? // thu muc src trong sites/ tuong ung, vd: sites/shop-thoi-trang
   premium     Boolean       @default(false)
   minPlanTier Int           @default(1) // tier goi toi thieu de dung mau nay
