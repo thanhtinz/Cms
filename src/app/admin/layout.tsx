@@ -29,8 +29,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <ShellFrame
       brand={settings.brandName}
       brandSub="Trang quản trị"
-      userName={admin.name}
-      userSub={`Quản trị viên · ${admin.email}`}
+      user={{ name: admin.name, email: admin.email, role: admin.role }}
+      badges={{ orders: pendingOrders || undefined, support: openTickets || undefined }}
       menu={menu}
       footerText={`${settings.brandName} — Khu vực quản trị · Chỉ dành cho quản trị viên`}
     >

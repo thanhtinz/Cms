@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 html { scroll-behavior: smooth; }
+/* overflow-x: clip (khong phai hidden) de chan tran ngang o mobile ma khong pha position: sticky */
+html, body { overflow-x: clip; }
 body { @apply bg-slate-50 text-slate-800 antialiased; }
 ::selection { @apply bg-brand-600 text-white; }
 

@@ -24,8 +24,8 @@ export default async function PortalLayout({ children }: { children: React.React
     <ShellFrame
       brand={settings.brandName}
       brandSub="Dashboard khách hàng"
-      userName={user.name}
-      userSub={user.email}
+      user={{ name: user.name, email: user.email, role: user.role }}
+      badges={{ support: openTickets || undefined }}
       menu={menu}
       footerText={`${settings.brandName} — Dashboard khách hàng · Hỗ trợ: ${settings.supportEmail}${settings.supportPhone ? ` · ${settings.supportPhone}` : ""}`}
       sideExtra={

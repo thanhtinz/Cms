@@ -99,6 +99,7 @@ export default async function AdminDashboard() {
     return { date: d, value: revByDay.get(dayKey(d)) ?? 0 };
   });
   const chartMax = Math.max(1, ...chartDays.map((d) => d.value));
+  const hasRevenue = chartDays.some((d) => d.value > 0);
   const revDelta = pctChange(rev14, revPrev14);
   const stat30 = [
     { icon: "fa-sack-dollar", label: "Doanh thu 30 ngày", value: formatVND(rev30), delta: pctChange(rev30, revPrev30), note: "so với 30 ngày trước" },
@@ -150,8 +151,8 @@ export default async function AdminDashboard() {
       </div>
 
       {/* ===== THONG KE ===== */}
-      <div className="mt-6 grid items-start gap-6 xl:grid-cols-3">
-        <div className="card p-5 xl:col-span-2">
+      <div className="mt-6 grid min-w-0 items-start gap-6 xl:grid-cols-3">
+        <div className="card min-w-0 p-5 xl:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="font-bold text-slate-900"><i className="fa-solid fa-chart-column mr-2 text-brand-600" aria-hidden /> Doanh thu 14 ngày gần nhất</h2>
@@ -167,22 +168,30 @@ export default async function AdminDashboard() {
             </div>
             <Link href="/admin/don-thue" className="text-sm font-semibold text-brand-700 hover:underline">Xem đơn thuê →</Link>
           </div>
-          <div className="mt-5 flex h-44 items-end gap-1.5 sm:gap-2">
-            {chartDays.map((d, i) => (
-              <div key={i} className="group flex h-full flex-1 flex-col items-center justify-end gap-1.5" title={`${d.date.getDate()}/${d.date.getMonth() + 1}: ${formatVND(d.value)}`}>
-                <span className="text-[10px] font-semibold text-slate-400 opacity-0 transition group-hover:opacity-100">
-                  {d.value > 0 ? `${Math.round(d.value / 1000)}k` : ""}
-                </span>
-                <div
-                  className={`w-full rounded-t-md transition ${d.value > 0 ? "bg-gradient-to-t from-brand-600 to-brand-400 group-hover:from-brand-700 group-hover:to-brand-500" : "bg-slate-100"}`}
-                  style={{ height: `${Math.max(2, Math.round((d.value / chartMax) * 100))}%` }}
-                />
-                <span className={`text-[10px] ${i === 13 ? "font-bold text-brand-700" : "text-slate-400"}`}>
-                  {d.date.getDate()}/{d.date.getMonth() + 1}
-                </span>
-              </div>
-            ))}
-          </div>
+          {hasRevenue ? (
+            <div className="mt-5 flex h-44 items-end gap-1.5 sm:gap-2">
+              {chartDays.map((d, i) => (
+                <div key={i} className="group flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5" title={`${d.date.getDate()}/${d.date.getMonth() + 1}: ${formatVND(d.value)}`}>
+                  <span className="text-[10px] font-semibold text-slate-400 opacity-0 transition group-hover:opacity-100">
+                    {d.value > 0 ? `${Math.round(d.value / 1000)}k` : ""}
+                  </span>
+                  <div
+                    className={`w-full rounded-t-md transition ${d.value > 0 ? "bg-gradient-to-t from-brand-600 to-brand-400 group-hover:from-brand-700 group-hover:to-brand-500" : "bg-slate-100"}`}
+                    style={{ height: `${Math.max(2, Math.round((d.value / chartMax) * 100))}%` }}
+                  />
+                  <span className={`whitespace-nowrap text-[10px] ${i % 2 === 1 ? "hidden sm:block" : ""} ${i === 13 ? "font-bold text-brand-700" : "text-slate-400"}`}>
+                    {d.date.getDate()}/{d.date.getMonth() + 1}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-5 flex h-44 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 text-center">
+              <i className="fa-solid fa-chart-column text-2xl text-slate-300" aria-hidden />
+              <p className="text-sm font-medium text-slate-500">Chưa có doanh thu trong 14 ngày qua</p>
+              <p className="max-w-sm text-xs leading-relaxed text-slate-400">Biểu đồ cột sẽ tự hiện khi có đơn thuê được xác nhận thanh toán — mỗi cột là doanh thu của một ngày.</p>
+            </div>
+          )}
           <div className="mt-5 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-3">
             {stat30.map((s) => (
               <div key={s.label} className="rounded-2xl bg-slate-50 p-3.5">
@@ -199,7 +208,7 @@ export default async function AdminDashboard() {
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <div className="card p-5">
             <h2 className="font-bold text-slate-900"><i className="fa-solid fa-chart-pie mr-2 text-brand-600" aria-hidden /> Website theo trạng thái</h2>
             <div className="mt-4 flex items-center gap-4">
@@ -269,8 +278,8 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      <div className="mt-8 grid items-start gap-6 xl:grid-cols-2">
-        <div>
+      <div className="mt-8 grid min-w-0 items-start gap-6 xl:grid-cols-2">
+        <div className="min-w-0">
           <h2 className="text-lg font-bold text-slate-900">Website sắp hết hạn (≤ 30 ngày)</h2>
           <div className="card mt-3 overflow-x-auto">
             <table className="w-full min-w-[480px]">
@@ -308,7 +317,7 @@ export default async function AdminDashboard() {
           </div>
         </div>
 
-        <div>
+        <div className="min-w-0">
           <h2 className="text-lg font-bold text-slate-900">Đơn thuê mới nhất</h2>
           <div className="card mt-3 overflow-x-auto">
             <table className="w-full min-w-[480px]">
