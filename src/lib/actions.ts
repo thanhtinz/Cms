@@ -3,11 +3,12 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import crypto from "crypto";
-import { prisma, getSettings } from "./db";
+import { prisma, getSettings, bustSettingsCache } from "./db";
 import { createSession, destroySession, hashPassword, verifyPassword, requireAdmin, getCurrentUser } from "./auth";
 import { slugify, splitLines } from "./utils";
 import { normalizeDomain } from "./domain";
 import { checkVoucher } from "./voucher";
+import { quotaFromPackage, canAllocate } from "./quota";
 
 // ---------- AUTH ----------
 export async function registerAction(formData: FormData) {
@@ -37,7 +38,7 @@ export async function loginAction(formData: FormData) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     const back = tieptuc ? `&tieptuc=${encodeURIComponent(tieptuc)}` : "";
-    redirect(`/dang-nhap?loi=${encodeURIComponent(`${encodeURIComponent("Email hoặc mật khẩu không đúng — kiểm tra lại rồi thử lại nhé")}${back}`)}`);
+    redirect(`/dang-nhap?loi=${encodeURIComponent("Email hoặc mật khẩu không đúng — kiểm tra lại rồi thử lại nhé")}${back}`);
   }
   await createSession(user.id);
   const target = user.role === "ADMIN" ? "/admin" : tieptuc || "/portal";
@@ -87,7 +88,7 @@ export async function createOrderAction(formData: FormData) {
   let voucherDiscount = 0;
   if (voucherCode) {
     const r = await checkVoucher(voucherCode, subtotal);
-    if (!r.ok) redirect(`${back}?loi=${encodeURIComponent(`${encodeURIComponent("Voucher: " + r.message)}`)}`);
+    if (!r.ok) redirect(`${back}?loi=${encodeURIComponent("Voucher: " + r.message)}`);
     voucherId = r.voucher.id;
     voucherCodeSaved = r.voucher.code;
     voucherDiscount = r.discount;
@@ -183,7 +184,7 @@ export async function createRenewalAction(formData: FormData) {
   let voucherDiscount = 0;
   if (voucherCode) {
     const r = await checkVoucher(voucherCode, subtotal);
-    if (!r.ok) redirect(`${back}?loi=${encodeURIComponent(`${encodeURIComponent("Voucher: " + r.message)}`)}`);
+    if (!r.ok) redirect(`${back}?loi=${encodeURIComponent("Voucher: " + r.message)}`);
     voucherId = r.voucher.id;
     voucherCodeSaved = r.voucher.code;
     voucherDiscount = r.discount;
@@ -546,20 +547,33 @@ export async function saveSettingsAction(formData: FormData) {
       trialDays: Number(formData.get("trialDays") ?? 7),
       graceDays: Number(formData.get("graceDays") ?? 7),
       archiveDays: Number(formData.get("archiveDays") ?? 30),
+      capacityDiskGb: Math.max(1, Number(formData.get("capacityDiskGb") ?? 200)),
+      capacityBandwidthGb: Math.max(1, Number(formData.get("capacityBandwidthGb") ?? 10000)),
+      oversellRatio: Math.min(5, Math.max(1, Number(formData.get("oversellRatio") ?? 1))),
       footerText: String(formData.get("footerText") ?? "").trim(),
     },
   });
+  bustSettingsCache();
   revalidatePath("/admin/cai-dat");
   revalidatePath("/");
-  redirect("/admin/cai-dat?ok=" + encodeURIComponent("1"));
+  redirect("/admin/cai-dat?ok=" + encodeURIComponent("Đã lưu cài đặt hệ thống"));
 }
 
 // ---------- ADMIN: DON THUE / WEBSITE ----------
 export async function confirmPaymentAction(formData: FormData) {
   await requireAdmin();
   const orderId = String(formData.get("orderId") ?? "");
-  const order = await prisma.rentalOrder.findUnique({ where: { id: orderId }, include: { site: true } });
+  const order = await prisma.rentalOrder.findUnique({ where: { id: orderId }, include: { site: true, timePackage: true, plan: true } });
   if (!order || order.status !== "CHO_THANH_TOAN") redirect("/admin/don-thue");
+  // Don tao website MOI: kiem tra suc chua VPS truoc khi nhan tien —
+  // han muc cua goi se duoc cap tu dong cho website sap tao.
+  const quota = quotaFromPackage(order.timePackage ?? order.plan);
+  if (!order.renewalSiteId && !order.site) {
+    const cap = await canAllocate(quota);
+    if (!cap.ok) {
+      redirect(`/admin/don-thue/${orderId}?loi=${encodeURIComponent("Chưa xác nhận được: " + (cap.reason ?? "hệ thống đã hết dung lượng"))}`);
+    }
+  }
   await prisma.rentalOrder.update({
     where: { id: orderId },
     data: { status: "DA_THANH_TOAN", paidAt: new Date() },
@@ -578,6 +592,12 @@ export async function confirmPaymentAction(formData: FormData) {
           expiresAt: expires,
           status: "DANG_HOAT_DONG",
           timePackageId: order.timePackageId ?? site.timePackageId,
+          // Gia han theo goi nao thi han muc cap nhat theo goi do
+          quotaStorageGb: quota.storageGb,
+          quotaBandwidthGb: quota.bandwidthGb,
+          quotaPages: quota.pages,
+          quotaProducts: quota.products,
+          quotaCmsUsers: quota.cmsUsers,
         },
       });
     }
@@ -602,6 +622,13 @@ export async function confirmPaymentAction(formData: FormData) {
         domain: order.domain,
         dnsToken: crypto.randomBytes(10).toString("hex"),
         status: "CHO_TRO_DNS",
+        // TU DONG CHIA DUNG LUONG: han muc cua goi duoc cap ngay cho website nay
+        quotaStorageGb: quota.storageGb,
+        quotaBandwidthGb: quota.bandwidthGb,
+        quotaPages: quota.pages,
+        quotaProducts: quota.products,
+        quotaCmsUsers: quota.cmsUsers,
+        usagePeriod: new Date().toISOString().slice(0, 7),
       },
     });
   }

@@ -226,6 +226,17 @@ model Site {
   status     String      @default("CHO_TRO_DNS") // CHO_TRO_DNS | DANG_HOAT_DONG | TAM_NGUNG | HET_HAN
   startedAt  DateTime?
   expiresAt  DateTime?
+  // Han muc tai nguyen DUOC CAP tu dong tu goi thoi gian luc tao website (snapshot —
+  // admin sua goi sau nay khong lam thay doi han muc cua website da ban)
+  quotaStorageGb   Int   @default(0)
+  quotaBandwidthGb Int   @default(0) // -1 = khong gioi han hop ly
+  quotaPages       Int   @default(-1)
+  quotaProducts    Int   @default(-1)
+  quotaCmsUsers    Int   @default(1)
+  // Muc su dung thuc te (CMS cua website khach cap nhat qua API noi bo sau nay)
+  usedStorageMb    Int   @default(0)
+  usedBandwidthGb  Float @default(0)
+  usagePeriod      String @default("") // "YYYY-MM" cua ky bang thong dang tinh
   renewalOrders RentalOrder[] @relation("RenewalOrders")
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
@@ -251,5 +262,10 @@ model Setting {
   graceDays      Int    @default(7)
   archiveDays    Int    @default(30)
   footerText     String @default("")
+  // Suc chua VPS (admin khai bao theo cau hinh may chu that) — he thong tu dong
+  // cong don han muc da cap cho cac website de biet con cap duoc bao nhieu.
+  capacityDiskGb      Int   @default(200) // tong dung luong dia danh cho website khach
+  capacityBandwidthGb Int   @default(10000) // tong bang thong/thang cua VPS
+  oversellRatio       Float @default(1) // 1 = khong ban vuot; 1.5 = cap toi da 150% suc chua
   updatedAt      DateTime @updatedAt
 }
