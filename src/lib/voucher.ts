@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 
-// Kiem tra voucher tai 1 muc tien (so tien SAU chiet khau thoi han).
+// Kiem tra voucher tren tong gia goi thoi gian.
 // Tra ve so tien duoc giam neu hop le, hoac thong bao loi de hien cho khach.
 export async function checkVoucher(rawCode: string, amount: number) {
   const code = rawCode.trim().toUpperCase();
