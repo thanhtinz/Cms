@@ -1,47 +1,40 @@
-import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
+import { prisma, getSettings } from "@/lib/db";
+import ShellFrame from "@/components/ShellFrame";
 
-const menu = [
-  { href: "/admin", label: "Tổng quan" },
-  { href: "/admin/mau", label: "Mẫu website" },
-  { href: "/admin/goi-thoi-gian", label: "Gói thời gian" },
-  { href: "/admin/don-thue", label: "Đơn thuê" },
-  { href: "/admin/website", label: "Website khách" },
-  { href: "/admin/khach-hang", label: "Khách hàng" },
-  { href: "/admin/voucher", label: "Voucher giảm giá" },
-  { href: "/admin/tin-tuc", label: "Tin tức" },
-  { href: "/admin/faq", label: "Hỏi đáp (FAQ)" },
-  { href: "/admin/cai-dat", label: "Cài đặt hệ thống" },
-];
+export const dynamic = "force-dynamic";
 
+// Trang quan tri: shell rieng (header/footer/menu burger cua chinh no)
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await requireAdmin();
+  const [settings, pendingOrders, openTickets] = await Promise.all([
+    getSettings(),
+    prisma.rentalOrder.count({ where: { status: "CHO_THANH_TOAN" } }),
+    prisma.supportTicket.count({ where: { status: "OPEN" } }),
+  ]);
+  const menu = [
+    { href: "/admin", label: "Tổng quan", icon: "fa-gauge-high" },
+    { href: "/admin/don-thue", label: "Đơn thuê", icon: "fa-receipt", badge: pendingOrders || undefined },
+    { href: "/admin/website", label: "Website khách", icon: "fa-globe" },
+    { href: "/admin/khach-hang", label: "Khách hàng", icon: "fa-users" },
+    { href: "/admin/ho-tro", label: "Hỗ trợ khách hàng", icon: "fa-headset", badge: openTickets || undefined },
+    { href: "/admin/mau", label: "Mẫu website", icon: "fa-layer-group" },
+    { href: "/admin/goi-thoi-gian", label: "Gói thời gian", icon: "fa-box-open" },
+    { href: "/admin/voucher", label: "Voucher giảm giá", icon: "fa-ticket" },
+    { href: "/admin/tin-tuc", label: "Tin tức", icon: "fa-newspaper" },
+    { href: "/admin/faq", label: "FAQ", icon: "fa-circle-question" },
+    { href: "/admin/cai-dat", label: "Cài đặt", icon: "fa-gear" },
+  ];
   return (
-    <div className="mx-auto flex max-w-7xl gap-6 px-4 py-8">
-      <aside className="hidden w-56 shrink-0 md:block">
-        <div className="card sticky top-24 p-4">
-          <div className="px-2 pb-2">
-            <div className="font-bold">Quản trị nền tảng</div>
-            <div className="text-xs text-slate-500">{admin.name} · {admin.email}</div>
-          </div>
-          <nav className="space-y-1">
-            {menu.map((m) => (
-              <Link key={m.href} href={m.href} className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-brand-50 hover:text-brand-800">
-                {m.label}
-              </Link>
-            ))}
-          </nav>
-          <Link href="/" className="mt-3 block rounded-lg px-3 py-2 text-sm text-slate-400 hover:text-slate-600">← Về trang chủ</Link>
-        </div>
-      </aside>
-      <div className="min-w-0 flex-1">
-        <div className="mb-4 flex flex-wrap gap-2 md:hidden">
-          {menu.map((m) => (
-            <Link key={m.href} href={m.href} className="rounded-full border bg-white px-3 py-1.5 text-xs font-medium">{m.label}</Link>
-          ))}
-        </div>
-        {children}
-      </div>
-    </div>
+    <ShellFrame
+      brand={settings.brandName}
+      brandSub="Trang quản trị"
+      userName={admin.name}
+      userSub={`Quản trị viên · ${admin.email}`}
+      menu={menu}
+      footerText={`${settings.brandName} — Khu vực quản trị · Chỉ dành cho quản trị viên`}
+    >
+      {children}
+    </ShellFrame>
   );
 }
