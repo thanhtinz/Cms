@@ -32,15 +32,23 @@ const SITE_CHART_COLORS: Record<string, string> = {
   HET_HAN: "#ef4444",
 };
 
-// Tong quan quan tri: doanh thu, viec can xu ly, don/web/ticket moi
-export default async function AdminDashboard() {
+// Tong quan quan tri: doanh thu, viec can xu ly, don/web/ticket moi.
+// Thong ke DOI KY duoc: o so lieu theo ?ky= (hom-nay | 7-ngay | 30-ngay | tat-ca),
+// bieu do doanh thu theo ?bd= (14 | 30 | 90 ngay) — giong cac admin chuyen nghiep.
+export default async function AdminDashboard({ searchParams }: { searchParams: { ky?: string; bd?: string } }) {
   const in30 = new Date(Date.now() + 30 * 86400000);
   const today0 = startOfDay(new Date());
-  const start14 = new Date(today0.getTime() - 13 * 86400000);
-  const start28 = new Date(today0.getTime() - 27 * 86400000);
-  const start30 = new Date(today0.getTime() - 29 * 86400000);
-  const start60 = new Date(today0.getTime() - 59 * 86400000);
-  const [templates, packages, orders, sites, customers, paidAgg, pendingCount, waitingDns, openTickets, expiringSites, recentTickets, capacity, paidRecent, orders30, ordersPrev30, users30, usersPrev30, siteStatusGroups, packageGroups] = await Promise.all([
+  const KY_DAYS: Record<string, number | null> = { "hom-nay": 1, "7-ngay": 7, "30-ngay": 30, "tat-ca": null };
+  const kyKey = searchParams.ky && searchParams.ky in KY_DAYS ? searchParams.ky : "30-ngay";
+  const kyDays = KY_DAYS[kyKey];
+  const kyLabel = kyKey === "hom-nay" ? "Hôm nay" : kyKey === "7-ngay" ? "7 ngày" : kyKey === "tat-ca" ? "Tất cả" : "30 ngày";
+  const bdDays = [14, 30, 90].includes(Number(searchParams.bd)) ? Number(searchParams.bd) : 14;
+  const chartStart = new Date(today0.getTime() - (bdDays - 1) * 86400000);
+  const chartPrevStart = new Date(today0.getTime() - (2 * bdDays - 1) * 86400000);
+  const kyStart = kyDays ? new Date(today0.getTime() - (kyDays - 1) * 86400000) : null;
+  const kyPrevStart = kyDays ? new Date(today0.getTime() - (2 * kyDays - 1) * 86400000) : null;
+  const fetchStart = kyPrevStart && kyPrevStart < chartPrevStart ? kyPrevStart : chartPrevStart;
+  const [templates, packages, orders, sites, customers, paidAgg, pendingCount, waitingDns, openTickets, expiringSites, recentTickets, capacity, paidRecent, siteStatusGroups, packageGroups] = await Promise.all([
     prisma.template.count({ where: { status: "PUBLISHED" } }),
     prisma.timePackage.count({ where: { active: true } }),
     prisma.rentalOrder.findMany({ orderBy: { createdAt: "desc" }, take: 8, include: { user: true, template: true } }),
@@ -64,13 +72,9 @@ export default async function AdminDashboard() {
     }),
     getCapacity(),
     prisma.rentalOrder.findMany({
-      where: { status: "DA_THANH_TOAN", OR: [{ paidAt: { gte: start60 } }, { paidAt: null, createdAt: { gte: start60 } }] },
+      where: { status: "DA_THANH_TOAN", OR: [{ paidAt: { gte: fetchStart } }, { paidAt: null, createdAt: { gte: fetchStart } }] },
       select: { total: true, paidAt: true, createdAt: true },
     }),
-    prisma.rentalOrder.count({ where: { createdAt: { gte: start30 } } }),
-    prisma.rentalOrder.count({ where: { createdAt: { gte: start60, lt: start30 } } }),
-    prisma.user.count({ where: { role: "CUSTOMER", createdAt: { gte: start30 } } }),
-    prisma.user.count({ where: { role: "CUSTOMER", createdAt: { gte: start60, lt: start30 } } }),
     prisma.site.groupBy({ by: ["status"], _count: true }),
     prisma.rentalOrder.groupBy({
       by: ["planName"],
@@ -82,30 +86,44 @@ export default async function AdminDashboard() {
     }),
   ]);
 
-  // --- Thong ke: doanh thu 14 ngay + so sanh ky truoc ---
+  // --- Thong ke: bieu do theo so ngay da chon + o so lieu theo ky da chon ---
   const revByDay = new Map<string, number>();
-  let rev14 = 0, revPrev14 = 0, rev30 = 0, revPrev30 = 0;
+  let revChart = 0, revChartPrev = 0, revKy = 0, revKyPrev = 0;
   for (const o of paidRecent) {
     const when = startOfDay(o.paidAt ?? o.createdAt);
     const t = when.getTime();
     revByDay.set(dayKey(when), (revByDay.get(dayKey(when)) ?? 0) + o.total);
-    if (t >= start14.getTime()) rev14 += o.total;
-    else if (t >= start28.getTime()) revPrev14 += o.total;
-    if (t >= start30.getTime()) rev30 += o.total;
-    else revPrev30 += o.total;
+    if (t >= chartStart.getTime()) revChart += o.total;
+    else revChartPrev += o.total;
+    if (kyStart) {
+      if (t >= kyStart.getTime()) revKy += o.total;
+      else revKyPrev += o.total;
+    }
   }
-  const chartDays = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date(start14.getTime() + i * 86400000);
+  const chartDays = Array.from({ length: bdDays }, (_, i) => {
+    const d = new Date(chartStart.getTime() + i * 86400000);
     return { date: d, value: revByDay.get(dayKey(d)) ?? 0 };
   });
   const chartMax = Math.max(1, ...chartDays.map((d) => d.value));
   const hasRevenue = chartDays.some((d) => d.value > 0);
-  const revDelta = pctChange(rev14, revPrev14);
-  const stat30 = [
-    { icon: "fa-sack-dollar", label: "Doanh thu 30 ngày", value: formatVND(rev30), delta: pctChange(rev30, revPrev30), note: "so với 30 ngày trước" },
-    { icon: "fa-receipt", label: "Đơn thuê 30 ngày", value: String(orders30), delta: pctChange(orders30, ordersPrev30), note: "so với 30 ngày trước" },
-    { icon: "fa-user-plus", label: "Khách mới 30 ngày", value: String(users30), delta: pctChange(users30, usersPrev30), note: "so với 30 ngày trước" },
+  const revDelta = pctChange(revChart, revChartPrev);
+  const labelEvery = bdDays <= 14 ? 1 : bdDays <= 30 ? 3 : 7;
+  // Dem don/khach trong ky va ky truoc (ky "tat-ca" lay tong toan thoi gian, khong so sanh)
+  const [ordKy, ordKyPrev, usrKy, usrKyPrev, ordAll] = kyDays
+    ? await Promise.all([
+        prisma.rentalOrder.count({ where: { createdAt: { gte: kyStart! } } }),
+        prisma.rentalOrder.count({ where: { createdAt: { gte: kyPrevStart!, lt: kyStart! } } }),
+        prisma.user.count({ where: { role: "CUSTOMER", createdAt: { gte: kyStart! } } }),
+        prisma.user.count({ where: { role: "CUSTOMER", createdAt: { gte: kyPrevStart!, lt: kyStart! } } }),
+        Promise.resolve(0),
+      ])
+    : await Promise.all([Promise.resolve(0), Promise.resolve(0), Promise.resolve(0), Promise.resolve(0), prisma.rentalOrder.count()]);
+  const statKy = [
+    { icon: "fa-sack-dollar", label: `Doanh thu · ${kyLabel}`, value: formatVND(kyDays ? revKy : (paidAgg._sum.total ?? 0)), delta: kyDays ? pctChange(revKy, revKyPrev) : null, note: kyDays ? "so với kỳ trước" : "toàn thời gian" },
+    { icon: "fa-receipt", label: `Đơn thuê · ${kyLabel}`, value: String(kyDays ? ordKy : ordAll), delta: kyDays ? pctChange(ordKy, ordKyPrev) : null, note: kyDays ? "so với kỳ trước" : "toàn thời gian" },
+    { icon: "fa-user-plus", label: `Khách mới · ${kyLabel}`, value: String(kyDays ? usrKy : customers), delta: kyDays ? pctChange(usrKy, usrKyPrev) : null, note: kyDays ? "so với kỳ trước" : "toàn thời gian" },
   ];
+  const dashHref = (patch: Record<string, string>) => `/admin?${new URLSearchParams({ ky: kyKey, bd: String(bdDays), ...patch }).toString()}`;
   const siteTotal = siteStatusGroups.reduce((s, g) => s + g._count, 0);
   let acc = 0;
   const donutSegs = siteStatusGroups
@@ -155,18 +173,25 @@ export default async function AdminDashboard() {
         <div className="card min-w-0 p-5 xl:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-bold text-slate-900"><i className="fa-solid fa-chart-column mr-2 text-brand-600" aria-hidden /> Doanh thu 14 ngày gần nhất</h2>
+              <h2 className="font-bold text-slate-900"><i className="fa-solid fa-chart-column mr-2 text-brand-600" aria-hidden /> Doanh thu {bdDays} ngày gần nhất</h2>
               <div className="mt-1.5 flex items-baseline gap-2.5">
-                <span className="text-2xl font-black text-slate-900">{formatVND(rev14)}</span>
+                <span className="text-2xl font-black text-slate-900">{formatVND(revChart)}</span>
                 {revDelta && (
                   <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${revDelta.up ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}>
                     <i className={`fa-solid ${revDelta.up ? "fa-arrow-trend-up" : "fa-arrow-trend-down"}`} aria-hidden /> {revDelta.text}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400">So với 14 ngày trước đó ({formatVND(revPrev14)}) · tính theo ngày thanh toán</p>
+              <p className="text-xs text-slate-400">So với {bdDays} ngày trước đó ({formatVND(revChartPrev)}) · tính theo ngày thanh toán</p>
             </div>
-            <Link href="/admin/don-thue" className="text-sm font-semibold text-brand-700 hover:underline">Xem đơn thuê →</Link>
+            <div className="flex items-center gap-2">
+              <span className="flex gap-1 rounded-full bg-slate-100 p-1">
+                {[14, 30, 90].map((n) => (
+                  <Link key={n} href={dashHref({ bd: String(n) })} className={`rounded-full px-2.5 py-1 text-xs font-semibold ${bdDays === n ? "bg-white text-brand-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{n} ngày</Link>
+                ))}
+              </span>
+              <Link href="/admin/don-thue" className="text-sm font-semibold text-brand-700 hover:underline">Xem đơn thuê →</Link>
+            </div>
           </div>
           {hasRevenue ? (
             <div className="mt-5 flex h-44 items-end gap-1.5 sm:gap-2">
@@ -179,7 +204,7 @@ export default async function AdminDashboard() {
                     className={`w-full rounded-t-md transition ${d.value > 0 ? "bg-gradient-to-t from-brand-600 to-brand-400 group-hover:from-brand-700 group-hover:to-brand-500" : "bg-slate-100"}`}
                     style={{ height: `${Math.max(2, Math.round((d.value / chartMax) * 100))}%` }}
                   />
-                  <span className={`whitespace-nowrap text-[10px] ${i % 2 === 1 ? "hidden sm:block" : ""} ${i === 13 ? "font-bold text-brand-700" : "text-slate-400"}`}>
+                  <span className={`whitespace-nowrap text-[10px] ${i % labelEvery !== 0 && i !== bdDays - 1 ? "hidden" : ""} ${i === bdDays - 1 ? "font-bold text-brand-700" : "text-slate-400"}`}>
                     {d.date.getDate()}/{d.date.getMonth() + 1}
                   </span>
                 </div>
@@ -188,12 +213,23 @@ export default async function AdminDashboard() {
           ) : (
             <div className="mt-5 flex h-44 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 text-center">
               <i className="fa-solid fa-chart-column text-2xl text-slate-300" aria-hidden />
-              <p className="text-sm font-medium text-slate-500">Chưa có doanh thu trong 14 ngày qua</p>
+              <p className="text-sm font-medium text-slate-500">Chưa có doanh thu trong {bdDays} ngày qua</p>
               <p className="max-w-sm text-xs leading-relaxed text-slate-400">Biểu đồ cột sẽ tự hiện khi có đơn thuê được xác nhận thanh toán — mỗi cột là doanh thu của một ngày.</p>
             </div>
           )}
-          <div className="mt-5 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-3">
-            {stat30.map((s) => (
+          <div className="mt-5 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-4">
+            <span className="mr-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Kỳ thống kê</span>
+            {[
+              { k: "hom-nay", l: "Hôm nay" },
+              { k: "7-ngay", l: "7 ngày" },
+              { k: "30-ngay", l: "30 ngày" },
+              { k: "tat-ca", l: "Tất cả" },
+            ].map((o) => (
+              <Link key={o.k} href={dashHref({ ky: o.k })} className={`rounded-full px-3 py-1 text-xs font-semibold ${kyKey === o.k ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>{o.l}</Link>
+            ))}
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {statKy.map((s) => (
               <div key={s.label} className="rounded-2xl bg-slate-50 p-3.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-medium text-slate-500"><i className={`fa-solid ${s.icon} mr-1.5 text-brand-500`} aria-hidden />{s.label}</span>

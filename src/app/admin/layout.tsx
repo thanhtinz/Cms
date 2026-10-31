@@ -23,6 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/voucher", label: "Voucher giảm giá", icon: "fa-ticket" },
     { href: "/admin/tin-tuc", label: "Tin tức", icon: "fa-newspaper" },
     { href: "/admin/faq", label: "FAQ", icon: "fa-circle-question" },
+    { href: "/admin/nhat-ky", label: "Nhật ký hoạt động", icon: "fa-clock-rotate-left" },
     { href: "/admin/cai-dat", label: "Cài đặt", icon: "fa-gear" },
   ];
   return (

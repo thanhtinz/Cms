@@ -10,6 +10,7 @@ import { normalizeDomain } from "./domain";
 import { checkVoucher } from "./voucher";
 import { quotaFromPackage, canAllocate } from "./quota";
 import { generateUniqueLicenseKey } from "./license";
+import { logActivity } from "./activity";
 
 // ---------- AUTH ----------
 export async function registerAction(formData: FormData) {
@@ -265,6 +266,7 @@ export async function setTicketStatusAction(formData: FormData) {
   const isAdmin = admin?.role === "ADMIN";
   if (!isAdmin && ticket.userId !== admin?.id) redirect("/portal/ho-tro");
   await prisma.supportTicket.update({ where: { id: ticketId }, data: { status } });
+  if (isAdmin) await logActivity("TICKET_STATUS", `Đổi trạng thái ticket "${ticket.subject}" → ${status}`);
   redirect(`${isAdmin ? "/admin/ho-tro" : "/portal/ho-tro"}/${ticketId}?ok=${encodeURIComponent(`Đã cập nhật trạng thái yêu cầu`)}`);
 }
 
@@ -294,6 +296,7 @@ export async function saveTemplateAction(formData: FormData) {
   const data = templateFromForm(formData);
   if (id) await prisma.template.update({ where: { id }, data });
   else await prisma.template.create({ data });
+  await logActivity("TEMPLATE", `${id ? "Cập nhật" : "Tạo mới"} mẫu website "${data.name}"`);
   revalidatePath("/admin/mau");
   revalidatePath("/mau");
   redirect("/admin/mau");
@@ -304,7 +307,9 @@ export async function deleteTemplateAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const used = await prisma.rentalOrder.count({ where: { templateId: id } });
   if (used > 0) redirect("/admin/mau?loi=" + encodeURIComponent("Mẫu đã có đơn thuê, không xoá được — hãy chuyển sang Nháp"));
+  const tplDel = await prisma.template.findUnique({ where: { id }, select: { name: true } });
   await prisma.template.delete({ where: { id } });
+  await logActivity("TEMPLATE", `Xoá mẫu website "${tplDel?.name ?? id}"`);
   revalidatePath("/admin/mau");
   redirect("/admin/mau");
 }
@@ -425,6 +430,7 @@ export async function saveTimePackageAction(formData: FormData) {
   if (dup && dup.id !== id) redirect("/admin/goi-thoi-gian?loi=" + encodeURIComponent("Slug gói đã tồn tại"));
   if (id) await prisma.timePackage.update({ where: { id }, data });
   else await prisma.timePackage.create({ data });
+  await logActivity("TIME_PACKAGE", `${id ? "Cập nhật" : "Tạo mới"} gói thời gian "${name}" (${data.months} tháng — ${data.price.toLocaleString("vi-VN")} ₫)`);
   revalidatePath("/admin/goi-thoi-gian");
   revalidatePath("/bang-gia");
   revalidatePath("/mau");
@@ -436,7 +442,9 @@ export async function deleteTimePackageAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const used = await prisma.rentalOrder.count({ where: { timePackageId: id } });
   if (used > 0) redirect("/admin/goi-thoi-gian?loi=" + encodeURIComponent("Gói đã có đơn thuê, không xoá được — hãy tắt Kích hoạt"));
+  const pkgDel = await prisma.timePackage.findUnique({ where: { id }, select: { name: true } });
   await prisma.timePackage.delete({ where: { id } });
+  await logActivity("TIME_PACKAGE", `Xoá gói thời gian "${pkgDel?.name ?? id}"`);
   revalidatePath("/admin/goi-thoi-gian");
   revalidatePath("/bang-gia");
   redirect("/admin/goi-thoi-gian?ok=" + encodeURIComponent("Đã xoá gói"));
@@ -473,6 +481,7 @@ export async function saveVoucherAction(formData: FormData) {
   if (dup && dup.id !== id) redirect("/admin/voucher?loi=" + encodeURIComponent("Mã voucher đã tồn tại"));
   if (id) await prisma.voucher.update({ where: { id }, data });
   else await prisma.voucher.create({ data });
+  await logActivity("VOUCHER", `${id ? "Cập nhật" : "Tạo mới"} voucher ${code} (${type === "PERCENT" ? `giảm ${data.value}%` : `giảm ${data.value.toLocaleString("vi-VN")} ₫`})`);
   revalidatePath("/admin/voucher");
   revalidatePath("/");
   redirect("/admin/voucher?ok=" + encodeURIComponent("Đã lưu voucher " + code));
@@ -483,7 +492,9 @@ export async function deleteVoucherAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   const used = await prisma.rentalOrder.count({ where: { voucherId: id } });
   if (used > 0) redirect("/admin/voucher?loi=" + encodeURIComponent("Voucher đã có đơn dùng, không xoá được — hãy tắt Kích hoạt"));
+  const vouDel = await prisma.voucher.findUnique({ where: { id }, select: { code: true } });
   await prisma.voucher.delete({ where: { id } });
+  await logActivity("VOUCHER", `Xoá voucher ${vouDel?.code ?? id}`);
   revalidatePath("/admin/voucher");
   revalidatePath("/");
   redirect("/admin/voucher?ok=" + encodeURIComponent("Đã xoá voucher"));
@@ -509,6 +520,7 @@ export async function saveNewsAction(formData: FormData) {
   if (dup && dup.id !== id) redirect(`/admin/tin-tuc/${id || "moi"}?loi=${encodeURIComponent(`Slug đã tồn tại, chọn slug khác`)}`);
   if (id) await prisma.newsPost.update({ where: { id }, data });
   else await prisma.newsPost.create({ data });
+  await logActivity("NEWS", `${id ? "Cập nhật" : "Đăng"} bài viết "${title}"`);
   revalidatePath("/admin/tin-tuc");
   revalidatePath("/tin-tuc");
   revalidatePath("/");
@@ -517,7 +529,10 @@ export async function saveNewsAction(formData: FormData) {
 
 export async function deleteNewsAction(formData: FormData) {
   await requireAdmin();
-  await prisma.newsPost.delete({ where: { id: String(formData.get("id") ?? "") } });
+  const newsDelId = String(formData.get("id") ?? "");
+  const newsDel = await prisma.newsPost.findUnique({ where: { id: newsDelId }, select: { title: true } });
+  await prisma.newsPost.delete({ where: { id: newsDelId } });
+  await logActivity("NEWS", `Xoá bài viết "${newsDel?.title ?? newsDelId}"`);
   revalidatePath("/admin/tin-tuc");
   revalidatePath("/tin-tuc");
   revalidatePath("/");
@@ -554,6 +569,7 @@ export async function saveSettingsAction(formData: FormData) {
       footerText: String(formData.get("footerText") ?? "").trim(),
     },
   });
+  await logActivity("SAVE_SETTINGS", "Cập nhật cài đặt hệ thống (thương hiệu, liên hệ, ngân hàng, DNS, sức chứa VPS, vòng đời thuê)");
   bustSettingsCache();
   revalidatePath("/admin/cai-dat");
   revalidatePath("/");
@@ -579,6 +595,7 @@ export async function confirmPaymentAction(formData: FormData) {
     where: { id: orderId },
     data: { status: "DA_THANH_TOAN", paidAt: new Date() },
   });
+  await logActivity("CONFIRM_PAYMENT", `Xác nhận thanh toán đơn ${order.code} — ${order.total.toLocaleString("vi-VN")} ₫ (${order.renewalSiteId ? "gia hạn" : "thuê mới"}, tên miền ${order.domain})`);
   if (order.renewalSiteId) {
     // Don GIA HAN: cong them thoi gian vao website hien tai (tu han cu neu con han, tu hom nay neu da het)
     const site = await prisma.site.findUnique({ where: { id: order.renewalSiteId } });
@@ -646,6 +663,7 @@ export async function regenerateLicenseKeyAction(formData: FormData) {
   if (!site) redirect("/admin/website");
   const key = await generateUniqueLicenseKey();
   await prisma.site.update({ where: { id: siteId }, data: { licenseKey: key, keyActivatedAt: null } });
+  await logActivity("REGEN_KEY", `Cấp lại key kích hoạt cho website ${site.name} (${site.domain}) — key cũ đã mất hiệu lực`);
   revalidatePath("/admin/website");
   revalidatePath(`/portal/website/${siteId}`);
   redirect(`/admin/website?ok=${encodeURIComponent(`Đã cấp key mới cho website ${site.name}: ${key}`)}`);
@@ -656,6 +674,7 @@ export async function cancelOrderAction(formData: FormData) {
   const orderId = String(formData.get("orderId") ?? "");
   const order = await prisma.rentalOrder.findUnique({ where: { id: orderId } });
   await prisma.rentalOrder.update({ where: { id: orderId }, data: { status: "DA_HUY" } });
+  await logActivity("CANCEL_ORDER", `Huỷ đơn ${order?.code ?? orderId} (${order ? order.total.toLocaleString("vi-VN") + " ₫" : "?"})`);
   // Don bi huy thi hoan lai luot dung voucher
   if (order?.voucherId && order.status !== "DA_HUY") {
     const v = await prisma.voucher.findUnique({ where: { id: order.voucherId } });
@@ -680,6 +699,7 @@ export async function activateSiteAction(formData: FormData) {
     where: { id: siteId },
     data: { status: "DANG_HOAT_DONG", startedAt: now, expiresAt },
   });
+  await logActivity("ACTIVATE_SITE", `Kích hoạt website ${site.name} (${site.domain}) — hạn thuê đến ${expiresAt.toLocaleDateString("vi-VN")}`);
   revalidatePath(back);
   redirect(`${back}?ok=${encodeURIComponent(`Website đã kích hoạt, hạn thuê tính từ hôm nay`)}`);
 }
@@ -690,7 +710,9 @@ export async function setSiteStatusAction(formData: FormData) {
   const status = String(formData.get("status") ?? "");
   const back = String(formData.get("back") ?? "/admin/website");
   if (["DANG_HOAT_DONG", "TAM_NGUNG", "HET_HAN", "CHO_TRO_DNS"].includes(status)) {
+    const site = await prisma.site.findUnique({ where: { id: siteId }, select: { name: true, domain: true } });
     await prisma.site.update({ where: { id: siteId }, data: { status } });
+    await logActivity("SET_SITE_STATUS", `Đổi trạng thái website ${site?.name ?? siteId} (${site?.domain ?? ""}) → ${status}`);
   }
   revalidatePath(back);
   redirect(back);

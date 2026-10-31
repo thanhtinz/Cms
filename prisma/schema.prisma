@@ -271,3 +271,14 @@ model Setting {
   oversellRatio       Float @default(1) // 1 = khong ban vuot; 1.5 = cap toi da 150% suc chua
   updatedAt      DateTime @updatedAt
 }
+
+// Nhat ky thao tac quan tri: ai da lam gi (xac nhan thanh toan, kich hoat,
+// cap lai key, doi cai dat...) — phuc vu doi soat va bao mat van hanh.
+model ActivityLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actorName String // snapshot "Ten (email)" cua nguoi thuc hien
+  action    String // CONFIRM_PAYMENT | CANCEL_ORDER | ACTIVATE_SITE | SET_SITE_STATUS | REGEN_KEY | SAVE_SETTINGS | VOUCHER | NEWS | TEMPLATE | TIME_PACKAGE | TICKET_STATUS
+  detail    String
+  createdAt DateTime @default(now())
+}
