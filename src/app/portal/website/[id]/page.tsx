@@ -5,6 +5,8 @@ import { requireUser } from "@/lib/auth";
 import { formatDate, formatVND, SITE_STATUS, ORDER_STATUS } from "@/lib/utils";
 import DomainCheckButton from "@/components/DomainCheckButton";
 import RenewForm from "@/components/RenewForm";
+import CopyText from "@/components/CopyText";
+import { ensureLicenseKey } from "@/lib/license";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,7 @@ export default async function PortalSiteDetail({ params, searchParams }: { param
     prisma.rentalOrder.findMany({ where: { renewalSiteId: site.id }, orderBy: { createdAt: "desc" } }),
   ]);
   const st = SITE_STATUS[site.status] ?? SITE_STATUS.HET_HAN;
+  const licenseKey = await ensureLicenseKey(site);
 
   const records = [
     { type: "CNAME", name: "@", value: s.cnameTarget, note: "Trỏ tên miền về hệ thống. Trên Cloudflare đặt Proxy: DNS only (mây xám)." },
@@ -48,6 +51,32 @@ export default async function PortalSiteDetail({ params, searchParams }: { param
           <div><dt className="text-slate-500">Ngày kích hoạt</dt><dd className="font-medium">{formatDate(site.startedAt)}</dd></div>
           <div><dt className="text-slate-500">Ngày hết hạn</dt><dd className="font-medium">{formatDate(site.expiresAt)}</dd></div>
         </dl>
+      </div>
+
+      <div className="card mt-6 border-brand-200 bg-gradient-to-br from-brand-50/80 to-white p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h2 className="font-bold text-slate-900"><i className="fa-solid fa-key mr-2 text-brand-600" aria-hidden /> Key kích hoạt website</h2>
+          {site.keyActivatedAt ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+              <i className="fa-solid fa-circle-check" aria-hidden /> Đã kích hoạt · {formatDate(site.keyActivatedAt)}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
+              <i className="fa-solid fa-hourglass-half" aria-hidden /> Chưa kích hoạt — chờ setup lần đầu
+            </span>
+          )}
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">
+          Mỗi lần thuê có <b>một key riêng</b>. Khi cài đặt website lần đầu tiên, hãy nhập key này ở bước kích hoạt —
+          hệ thống sẽ nhận diện đúng gói thuê, tên miền và hạn mức tài nguyên của bạn. Hãy giữ key bí mật như mật khẩu,
+          không chia sẻ cho người lạ.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2.5">
+          <code className="min-w-0 flex-1 select-all rounded-xl border border-dashed border-brand-300 bg-white px-4 py-3 font-mono text-base font-bold tracking-wider text-slate-900 sm:text-lg">
+            {licenseKey}
+          </code>
+          <CopyText text={licenseKey} />
+        </div>
       </div>
 
       <div className="card mt-6 p-6">

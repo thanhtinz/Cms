@@ -223,6 +223,8 @@ model Site {
   slug       String      @unique // ten mien tam: {slug}.{platformDomain}
   domain     String
   dnsToken   String
+  licenseKey     String?   @unique // key kich hoat RIENG cua lan thue — khach nhap khi setup website lan dau
+  keyActivatedAt DateTime? // thoi diem key duoc dung de kich hoat lan dau (null = chua kich hoat)
   status     String      @default("CHO_TRO_DNS") // CHO_TRO_DNS | DANG_HOAT_DONG | TAM_NGUNG | HET_HAN
   startedAt  DateTime?
   expiresAt  DateTime?

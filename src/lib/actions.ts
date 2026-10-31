@@ -9,6 +9,7 @@ import { slugify, splitLines } from "./utils";
 import { normalizeDomain } from "./domain";
 import { checkVoucher } from "./voucher";
 import { quotaFromPackage, canAllocate } from "./quota";
+import { generateUniqueLicenseKey } from "./license";
 
 // ---------- AUTH ----------
 export async function registerAction(formData: FormData) {
@@ -621,6 +622,7 @@ export async function confirmPaymentAction(formData: FormData) {
         slug,
         domain: order.domain,
         dnsToken: crypto.randomBytes(10).toString("hex"),
+        licenseKey: await generateUniqueLicenseKey(), // moi lan thue 1 key kich hoat rieng
         status: "CHO_TRO_DNS",
         // TU DONG CHIA DUNG LUONG: han muc cua goi duoc cap ngay cho website nay
         quotaStorageGb: quota.storageGb,
@@ -634,6 +636,19 @@ export async function confirmPaymentAction(formData: FormData) {
   }
   revalidatePath("/admin/don-thue");
   redirect(`/admin/don-thue/${orderId}?ok=${encodeURIComponent(`Đã xác nhận thanh toán và tạo website`)}`);
+}
+
+// Admin cap lai key kich hoat cho website (key cu vo hieu, trang thai kich hoat dat lai)
+export async function regenerateLicenseKeyAction(formData: FormData) {
+  await requireAdmin();
+  const siteId = String(formData.get("siteId") ?? "");
+  const site = await prisma.site.findUnique({ where: { id: siteId } });
+  if (!site) redirect("/admin/website");
+  const key = await generateUniqueLicenseKey();
+  await prisma.site.update({ where: { id: siteId }, data: { licenseKey: key, keyActivatedAt: null } });
+  revalidatePath("/admin/website");
+  revalidatePath(`/portal/website/${siteId}`);
+  redirect(`/admin/website?ok=${encodeURIComponent(`Đã cấp key mới cho website ${site.name}: ${key}`)}`);
 }
 
 export async function cancelOrderAction(formData: FormData) {
